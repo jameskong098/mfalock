@@ -19,7 +19,7 @@ The touch sensor is connected to GP26 of the microcontroller with the ground and
 
 For reference, here is the pinout diagram for the Raspberry Pi Pico:
 
-![Pin Reference](../assets/Pin_reference.png)
+![Pin Reference](../assets/Pin_Reference.png)
 
 ## Pattern Recognition
 
