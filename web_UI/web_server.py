@@ -16,9 +16,9 @@ import sys
 import time
 import json
 import glob
-import serial
 import threading
 import logging
+import subprocess
 from datetime import datetime
 from flask import Flask, render_template, jsonify, request, send_from_directory
 from flask_socketio import SocketIO, emit
@@ -38,53 +38,26 @@ socketio = SocketIO(app)
 
 # Global variables
 pico_connected = False
-serial_port = None
-auth_log_entriess = []
-
-# Pico connection settings
-BAUD_RATE = 115200
-SERIAL_TIMEOUT = 1.0
-
-def find_pico_port():
-    """Look for the Pico's serial port on common platforms"""
-    # For macOS
-    candidates = [
-        '/dev/tty.usbmodem*',
-        '/dev/tty.usbserial*',
-        # Linux patterns
-        '/dev/ttyACM*',
-        '/dev/ttyUSB*',
-        # Windows patterns (would need different handling)
-    ]
-    
-    for pattern in candidates:
-        ports = glob.glob(pattern)
-        if ports:
-            return ports[0]
-    
-    return None
+pico_process = None
+auth_log_entries = [] 
 
 def setup_pico_connection():
-    """Establish connection to the Pico device"""
-    global serial_port, pico_connected
-    
-    port = find_pico_port()
-    if not port:
-        logger.error("Could not find Pico device. Please check connection.")
-        return False
+    """Establish connection to the Pico device using mpremote"""
+    global pico_connected
     
     try:
-        serial_port = serial.Serial(port, baudrate=BAUD_RATE, timeout=SERIAL_TIMEOUT)
-        logger.info(f"Connected to Pico on {port}")
-        time.sleep(1)  # Wait for connection to stabilize
-        serial_port.write(b"\x03\r\n")  # Ctrl+C to interrupt any running program
-        time.sleep(0.5)
-        serial_port.write(b"\x04\r\n")  # Ctrl+D to soft reset
-        time.sleep(1)
+        # Check if Pico is available
+        result = subprocess.run(
+            ["mpremote", "connect", "list"], 
+            capture_output=True, 
+            text=True
+        )
         
-        # Clear input buffer
-        serial_port.reset_input_buffer()
+        if "No device found" in result.stdout:
+            logger.error("Could not find Pico device. Please check connection.")
+            return False
         
+        logger.info("Pico device detected")
         pico_connected = True
         return True
     except Exception as e:
@@ -93,67 +66,81 @@ def setup_pico_connection():
 
 def run_touch_lock():
     """Send command to run the touch lock program on the Pico"""
-    if not pico_connected or not serial_port:
+    if not pico_connected:
         logger.error("Pico is not connected. Cannot run touch lock program.")
         return False
     
     try:
-        # Run the touch lock Python file
+        # Run the touch lock Python file using mpremote
         logger.info("Starting touch lock program on Pico...")
-        serial_port.write(b"import touch_lock\r\n")
+        subprocess.run(
+            ["mpremote", "exec", "import touch_lock"], 
+            check=True
+        )
         return True
     except Exception as e:
         logger.error(f"Failed to run touch lock program: {e}")
         return False
 
 def monitor_pico():
-    """Monitor the Pico's serial output for events"""
-    global auth_log_entriess
+    """Monitor the Pico's output for events using mpremote"""
+    global auth_log_entries, pico_process
     
-    if not pico_connected or not serial_port:
+    if not pico_connected:
         logger.error("Pico is not connected. Cannot monitor output.")
         return
     
     logger.info("Starting Pico monitoring thread")
     
-    while pico_connected:
-        try:
-            if serial_port.in_waiting > 0:
-                line = serial_port.readline().decode('utf-8').strip()
-                if line:
-                    logger.info(f"Pico: {line}")
-                    
-                    # Process authentication events
-                    if "ACCESS GRANTED" in line:
-                        log_entry = {
-                            'id': len(auth_log_entriess) + 1,
-                            'timestamp': datetime.now().isoformat(),
-                            'user': 'User',  # We don't have individual user identification
-                            'location': 'Main Entrance',
-                            'status': 'success',
-                            'details': 'Pattern recognized correctly'
-                        }
-                        auth_log_entriess.append(log_entry)
-                        socketio.emit('auth_event', log_entry)
-                    
-                    # Detect failed attempts
-                    elif any(x in line for x in ["pattern failed", "Pattern timeout", "too short", "Final tap should be quick"]):
-                        log_entry = {
-                            'id': len(auth_log_entriess) + 1,
-                            'timestamp': datetime.now().isoformat(),
-                            'user': 'Unknown',
-                            'location': 'Main Entrance',
-                            'status': 'failure',
-                            'details': f'Incorrect pattern: {line}'
-                        }
-                        auth_log_entriess.append(log_entry)
-                        socketio.emit('auth_event', log_entry)
+    try:
+        # Start mpremote in repl mode and capture its output
+        pico_process = subprocess.Popen(
+            ["mpremote", "repl", "--escape-non-printable"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1
+        )
+        
+        # Read output line by line
+        while pico_connected and pico_process.poll() is None:
+            line = pico_process.stdout.readline().strip()
+            if line:
+                logger.info(f"Pico: {line}")
                 
+                # Process authentication events
+                if "ACCESS GRANTED" in line:
+                    log_entry = {
+                        'id': len(auth_log_entries) + 1,
+                        'timestamp': datetime.now().isoformat(),
+                        'user': 'User',
+                        'location': 'Main Entrance',
+                        'status': 'success',
+                        'details': 'Pattern recognized correctly'
+                    }
+                    auth_log_entries.append(log_entry)
+                    socketio.emit('auth_event', log_entry)
+                
+                # Detect failed attempts
+                elif any(x in line for x in ["pattern failed", "Pattern timeout", "too short", "Final tap should be quick"]):
+                    log_entry = {
+                        'id': len(auth_log_entries) + 1,
+                        'timestamp': datetime.now().isoformat(),
+                        'user': 'Unknown',
+                        'location': 'Main Entrance',
+                        'status': 'failure',
+                        'details': f'Incorrect pattern: {line}'
+                    }
+                    auth_log_entries.append(log_entry)
+                    socketio.emit('auth_event', log_entry)
+            
             time.sleep(0.1)
-        except Exception as e:
-            logger.error(f"Error in Pico monitoring: {e}")
-            pico_connected = False
-            break
+    except Exception as e:
+        logger.error(f"Error in Pico monitoring: {e}")
+        pico_connected = False
+    finally:
+        if pico_process and pico_process.poll() is None:
+            pico_process.terminate()
 
 def pico_connection_thread():
     """Thread to handle Pico connection and monitoring"""
@@ -199,15 +186,15 @@ def users():
 @app.route('/api/logs')
 def get_logs():
     """API endpoint to get authentication logs"""
-    return jsonify(auth_log_entriess)
+    return jsonify(auth_log_entries)
 
 @app.route('/api/status')
 def get_status():
     """API endpoint to check system status"""
     return jsonify({
         'pico_connected': pico_connected,
-        'auth_success_count': sum(1 for log in auth_log_entriess if log['status'] == 'success'),
-        'auth_failure_count': sum(1 for log in auth_log_entriess if log['status'] == 'failure')
+        'auth_success_count': sum(1 for log in auth_log_entries if log['status'] == 'success'),
+        'auth_failure_count': sum(1 for log in auth_log_entries if log['status'] == 'failure')
     })
 
 @app.route('/api/settings', methods=['GET', 'POST'])
@@ -234,8 +221,8 @@ def handle_connect():
     logger.info("Client connected to WebSocket")
     emit('status_update', {
         'pico_connected': pico_connected,
-        'auth_success_count': sum(1 for log in auth_log_entriess if log['status'] == 'success'),
-        'auth_failure_count': sum(1 for log in auth_log_entriess if log['status'] == 'failure')
+        'auth_success_count': sum(1 for log in auth_log_entries if log['status'] == 'success'),
+        'auth_failure_count': sum(1 for log in auth_log_entries if log['status'] == 'failure')
     })
 
 @app.errorhandler(404)

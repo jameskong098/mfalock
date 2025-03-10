@@ -13,13 +13,13 @@ This project implements a touch-sensitive lock mechanism using a capacitive sens
 
 The touch sensor is connected to GP26 of the microcontroller with the ground and power wires in the GND and 3V3(OUT)
 
-![Touch Sensor Wiring](../assets/touch_setup.png)
+![Touch Sensor Wiring](../web_UI/static/images/touch_setup.png)
 
 ### Pin Reference
 
 For reference, here is the pinout diagram for the Raspberry Pi Pico:
 
-![Pin Reference](../assets/Pin_Reference.png)
+![Pin Reference](../web_UI/static/images/Pin_Reference.png)
 
 ## Pattern Recognition
 
