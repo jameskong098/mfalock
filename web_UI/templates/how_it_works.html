@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section id="how-it-works">
+    <div class="card">
+        <h2 class="section-title">How to Authenticate</h2>
+        <p>The MFA Lock uses a specific touch pattern for authentication. Follow these steps:</p>
+        
+        <div class="auth-method">
+            <div class="auth-step">
+                <div class="icon"><i class="fas fa-hand-pointer"></i><i class="fas fa-hand-pointer"></i></div>
+                <h3>Step 1</h3>
+                <p>Double tap the sensor quickly (within 500ms)</p>
+            </div>
+            <div class="auth-step">
+                <div class="icon"><i class="fas fa-hand-paper"></i></div>
+                <h3>Step 2</h3>
+                <p>Long press the sensor for at least 1 second</p>
+            </div>
+            <div class="auth-step">
+                <div class="icon"><i class="fas fa-hand-pointer"></i></div>
+                <h3>Step 3</h3>
+                <p>Single tap the sensor quickly</p>
+            </div>
+        </div>
+        
+        <div class="pattern-animation" id="pattern-demo">
+            <div class="sensor" id="touch-sensor"></div>
+        </div>
+        <button id="demo-button" style="padding: 8px 16px; background-color: var(--secondary-color); color: white; border: none; border-radius: 4px; cursor: pointer; margin: 10px 0;">Demonstrate Pattern</button>
+    </div>
+    
+    <div class="card">
+        <h2 class="section-title">System Information</h2>
+        <p>The MFA Lock uses a touch-sensitive mechanism connected to a Raspberry Pi Pico microcontroller. The system detects specific patterns of touches to grant access.</p>
+        
+        <div class="system-diagram">
+            <img src="{{ url_for('static', filename='images/touch_setup.png') }}" alt="Touch Sensor Wiring" style="max-width: 100%; height: auto;">
+        </div>
+        
+        <h3>Technical Specifications:</h3>
+        <ul style="margin-left: 20px; margin-top: 10px;">
+            <li>Microcontroller: Raspberry Pi Pico</li>
+            <li>Sensor: Capacitive touch sensor on GPIO pin 26</li>
+            <li>Debounce time: 50ms</li>
+            <li>Maximum tap interval: 500ms</li>
+            <li>Minimum hold duration: 1000ms</li>
+        </ul>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/how_it_works.js') }}"></script>
+{% endblock %}

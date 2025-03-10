@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MFA Lock Security Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='/css/styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-fingerprint"></i>
+                    <h1>MFA Lock Security Dashboard</h1>
+                </div>
+                <nav>
+                    <ul>
+                        <li><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                        <li><a href="{{ url_for('how_it_works') }}">How It Works</a></li>
+                        <li><a href="{{ url_for('auth_logs') }}">Auth Logs</a></li>
+                        <li><a href="{{ url_for('settings') }}">Settings</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/common.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

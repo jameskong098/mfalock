@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section id="auth-logs">
+    <div class="card">
+        <h2 class="section-title">Authentication Logs</h2>
+        
+        <div class="filter-controls">
+            <input type="text" class="search-box" id="log-search" placeholder="Search logs...">
+            <div class="date-filter">
+                <input type="date" id="start-date">
+                <input type="date" id="end-date">
+                <button id="filter-button" style="padding: 8px 16px; background-color: var(--primary-color); color: white; border: none; border-radius: 4px; cursor: pointer;">Filter</button>
+            </div>
+        </div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Date & Time</th>
+                    <th>User</th>
+                    <th>Location</th>
+                    <th>Status</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody id="log-table-body">
+                <!-- Log entries will be populated by JavaScript -->
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/auth_logs.js') }}"></script>
+{% endblock %}

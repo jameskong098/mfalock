@@ -15,11 +15,12 @@ import os
 import sys
 import time
 import json
+import glob
 import serial
 import threading
 import logging
 from datetime import datetime
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, send_from_directory
 from flask_socketio import SocketIO, emit
 
 # Configure logging
@@ -31,14 +32,14 @@ logging.basicConfig(
 logger = logging.getLogger("MFALock")
 
 # Flask app setup
-app = Flask(__name__, static_folder='.', static_url_path='')
+app = Flask(__name__)
 app.config['SECRET_KEY'] = 'mfalock-secret-key!'
 socketio = SocketIO(app)
 
 # Global variables
 pico_connected = False
 serial_port = None
-auth_logs = []
+auth_log_entriess = []
 
 # Pico connection settings
 BAUD_RATE = 115200
@@ -56,7 +57,6 @@ def find_pico_port():
         # Windows patterns (would need different handling)
     ]
     
-    import glob
     for pattern in candidates:
         ports = glob.glob(pattern)
         if ports:
@@ -108,7 +108,7 @@ def run_touch_lock():
 
 def monitor_pico():
     """Monitor the Pico's serial output for events"""
-    global auth_logs
+    global auth_log_entriess
     
     if not pico_connected or not serial_port:
         logger.error("Pico is not connected. Cannot monitor output.")
@@ -126,27 +126,27 @@ def monitor_pico():
                     # Process authentication events
                     if "ACCESS GRANTED" in line:
                         log_entry = {
-                            'id': len(auth_logs) + 1,
+                            'id': len(auth_log_entriess) + 1,
                             'timestamp': datetime.now().isoformat(),
                             'user': 'User',  # We don't have individual user identification
                             'location': 'Main Entrance',
                             'status': 'success',
                             'details': 'Pattern recognized correctly'
                         }
-                        auth_logs.append(log_entry)
+                        auth_log_entriess.append(log_entry)
                         socketio.emit('auth_event', log_entry)
                     
                     # Detect failed attempts
                     elif any(x in line for x in ["pattern failed", "Pattern timeout", "too short", "Final tap should be quick"]):
                         log_entry = {
-                            'id': len(auth_logs) + 1,
+                            'id': len(auth_log_entriess) + 1,
                             'timestamp': datetime.now().isoformat(),
                             'user': 'Unknown',
                             'location': 'Main Entrance',
                             'status': 'failure',
                             'details': f'Incorrect pattern: {line}'
                         }
-                        auth_logs.append(log_entry)
+                        auth_log_entriess.append(log_entry)
                         socketio.emit('auth_event', log_entry)
                 
             time.sleep(0.1)
@@ -165,24 +165,68 @@ def pico_connection_thread():
     else:
         logger.error("Failed to connect to Pico")
 
+# Route handlers for different pages
 @app.route('/')
 def index():
-    """Serve the main HTML page"""
-    return app.send_static_file('index.html')
+    """Redirect to the dashboard"""
+    return render_template('dashboard.html')
+
+@app.route('/dashboard')
+def dashboard():
+    """Serve the dashboard page"""
+    return render_template('dashboard.html')
+
+@app.route('/auth_logs')
+def auth_logs():
+    """Serve the logs page"""
+    return render_template('auth_logs.html')
+
+@app.route('/how_it_works')
+def how_it_works():
+    """Serve the how it works page"""
+    return render_template('how_it_works.html')
+
+@app.route('/settings')
+def settings():
+    """Serve the settings page"""
+    return render_template('settings.html')
+
+@app.route('/users')
+def users():
+    """Serve the users page"""
+    return render_template('users.html')
 
 @app.route('/api/logs')
 def get_logs():
     """API endpoint to get authentication logs"""
-    return jsonify(auth_logs)
+    return jsonify(auth_log_entriess)
 
 @app.route('/api/status')
 def get_status():
     """API endpoint to check system status"""
     return jsonify({
         'pico_connected': pico_connected,
-        'auth_success_count': sum(1 for log in auth_logs if log['status'] == 'success'),
-        'auth_failure_count': sum(1 for log in auth_logs if log['status'] == 'failure')
+        'auth_success_count': sum(1 for log in auth_log_entriess if log['status'] == 'success'),
+        'auth_failure_count': sum(1 for log in auth_log_entriess if log['status'] == 'failure')
     })
+
+@app.route('/api/settings', methods=['GET', 'POST'])
+def handle_settings():
+    """API endpoint to get or update settings"""
+    if request.method == 'GET':
+        # For now, return default settings
+        return jsonify({
+            'securityLevel': 'high',
+            'notificationEmail': '',
+            'notifySuccess': False,
+            'notifyFailure': True
+        })
+    elif request.method == 'POST':
+        # Process settings update
+        settings = request.json
+        logger.info(f"Updated settings: {settings}")
+        # In a real app, we would save these settings somewhere
+        return jsonify({'status': 'success'})
 
 @socketio.on('connect')
 def handle_connect():
@@ -190,13 +234,13 @@ def handle_connect():
     logger.info("Client connected to WebSocket")
     emit('status_update', {
         'pico_connected': pico_connected,
-        'auth_success_count': sum(1 for log in auth_logs if log['status'] == 'success'),
-        'auth_failure_count': sum(1 for log in auth_logs if log['status'] == 'failure')
+        'auth_success_count': sum(1 for log in auth_log_entriess if log['status'] == 'success'),
+        'auth_failure_count': sum(1 for log in auth_log_entriess if log['status'] == 'failure')
     })
 
 @app.errorhandler(404)
 def page_not_found(e):
-    return "404: Page not found", 404
+    return render_template('404.html'), 404
 
 if __name__ == '__main__':
     # Start the Pico connection in a separate thread

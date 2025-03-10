@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section id="settings">
+    <div class="card">
+        <h2 class="section-title">System Settings</h2>
+        
+        <form id="settings-form">
+            <div class="form-group">
+                <label for="security-level">Security Level</label>
+                <select id="security-level" name="security-level">
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high" selected>High</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="notification-email">Notification Email</label>
+                <input type="email" id="notification-email" name="notification-email" placeholder="Enter email for notifications">
+            </div>
+            
+            <div class="form-group">
+                <label>Notification Settings</label>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="notify-success" name="notify-success">
+                    <label for="notify-success">Notify on successful access</label>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="notify-failure" name="notify-failure" checked>
+                    <label for="notify-failure">Notify on failed attempts</label>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn primary">Save Settings</button>
+        </form>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/settings.js') }}"></script>
+{% endblock %}
