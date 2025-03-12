@@ -130,7 +130,7 @@ def run_touch_lock():
 
 def monitor_pico():
     """Monitor the Pico's output for events using mpremote"""
-    global auth_log_entries, pico_process
+    global auth_log_entries, pico_process, pico_connected
     
     if not pico_connected:
         logger.error("Pico is not connected. Cannot monitor output.")
@@ -147,6 +147,13 @@ def monitor_pico():
             text=True,
             bufsize=1
         )
+        
+        # Emit status update to clients
+        socketio.emit('status_update', {
+            'pico_connected': pico_connected,
+            'auth_success_count': sum(1 for log in auth_log_entries if log['status'] == 'success'),
+            'auth_failure_count': sum(1 for log in auth_log_entries if log['status'] == 'failure')
+        })
         
         # Read output line by line
         while pico_connected and pico_process.poll() is None:
@@ -184,22 +191,44 @@ def monitor_pico():
     except Exception as e:
         logger.error(f"Error in Pico monitoring: {e}")
         pico_connected = False
+        
+        # Emit disconnection status to clients
+        socketio.emit('status_update', {
+            'pico_connected': pico_connected,
+            'auth_success_count': sum(1 for log in auth_log_entries if log['status'] == 'success'),
+            'auth_failure_count': sum(1 for log in auth_log_entries if log['status'] == 'failure')
+        })
     finally:
         if pico_process and pico_process.poll() is None:
             pico_process.terminate()
+            pico_process = None
 
 def pico_connection_thread():
     """Thread to handle Pico connection and monitoring"""
-    if setup_pico_connection():
-        if check_and_copy_touch_lock():
-            if run_touch_lock():
-                monitor_pico()
+    global pico_connected
+    reconnection_interval = 2  # seconds between reconnection attempts
+    
+    while True:
+        if not pico_connected:
+            logger.info("Attempting to connect to Pico...")
+            if setup_pico_connection():
+                logger.info("Pico connected. Setting up touch lock...")
+                if check_and_copy_touch_lock():
+                    if run_touch_lock():
+                        monitor_pico()
+                    else:
+                        logger.error("Failed to start touch lock program")
+                else:
+                    logger.error("Failed to check or copy touch_lock.py to Pico")
             else:
-                logger.error("Failed to start touch lock program")
-        else:
-            logger.error("Failed to check or copy touch_lock.py to Pico")
-    else:
-        logger.error("Failed to connect to Pico")
+                logger.warning(f"No Pico detected. Will retry in {reconnection_interval} seconds...")
+        
+        # Sleep before next connection check
+        time.sleep(reconnection_interval)
+        
+        # If we get here, it means monitor_pico() has exited
+        # (either due to error or disconnection)
+        pico_connected = False
 
 # Route handlers for different pages
 @app.route('/')
