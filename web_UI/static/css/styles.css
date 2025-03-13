@@ -272,6 +272,72 @@ tr:hover {
     color: white;
 }
 
+.connection-status-container {
+    margin-left: 20px;
+    display: flex;
+    align-items: center;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    width: 175px; 
+    box-sizing: border-box;
+    justify-content: center;
+}
+
+.status-indicator .status-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.status-indicator .status-icon {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 8px;
+    transition: all 0.3s ease;
+}
+
+.status-indicator.success {
+    background-color: rgba(52, 199, 89, 0.15);
+    color: #34c759;
+    border: 1px solid rgba(52, 199, 89, 0.2);
+}
+
+.status-indicator.success .status-icon {
+    background-color: #34c759;
+    box-shadow: 0 0 0 2px rgba(52, 199, 89, 0.3);
+}
+
+.status-indicator.failure {
+    background-color: rgba(255, 69, 58, 0.15);
+    color: #ff453a;
+    border: 1px solid rgba(255, 69, 58, 0.2);
+}
+
+.status-indicator.failure .status-icon {
+    background-color: #ff453a;
+    box-shadow: 0 0 0 2px rgba(255, 69, 58, 0.3);
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.status-indicator.status-changed {
+    animation: pulse 0.5s ease-in-out;
+}
+
 @media (max-width: 768px) {
     .header-content {
         flex-direction: column;

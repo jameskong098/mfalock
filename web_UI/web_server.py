@@ -54,6 +54,7 @@ def setup_pico_connection():
 
     if "MicroPython Board in FS mode" and "2e8a:0005" not in result.stdout:
         logger.error("Could not find Pico device. Please check connection.")
+        pico_connected = False
         return False
     
     logger.info("Pico device detected")
@@ -267,7 +268,7 @@ def get_logs():
     """API endpoint to get authentication logs"""
     return jsonify(auth_log_entries)
 
-@app.route('/api/status')
+@app.route('/api/pico_status')
 def get_status():
     """API endpoint to check system status"""
     return jsonify({
