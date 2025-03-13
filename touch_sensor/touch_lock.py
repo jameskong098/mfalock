@@ -36,6 +36,9 @@ pattern_state = 0  # 0: waiting for double tap, 1: waiting for hold, 2: waiting 
 in_sequence = False
 is_holding = False
 
+# Add a flag to track if timeout message has been printed
+timeout_message_printed = False
+
 while True:
     current_value = pin_sensor.value()
     current_time = time.ticks_ms()
@@ -79,10 +82,12 @@ while True:
                     if tap_duration >= min_hold_duration:
                         print(f"Long hold complete ({tap_duration}ms), now waiting for single tap")
                         pattern_state = 2
+                        last_tap_time = current_time  # Update last_tap_time to start timing for the next state
                     else:
                         print(f"Hold too short ({tap_duration}ms), pattern failed")
                         pattern_state = 0
                         tap_count = 0
+                        timeout_message_printed = False
                 
                 elif pattern_state == 2:  # Waiting for final single tap
                     # Check if this is a quick tap (not another long hold)
@@ -93,10 +98,12 @@ while True:
                         # Reset pattern detection
                         pattern_state = 0
                         tap_count = 0
+                        timeout_message_printed = False
                     else:
                         print("Final tap should be quick, not a hold")
                         pattern_state = 0
                         tap_count = 0
+                        timeout_message_printed = False
                 
                 last_tap_time = current_time
             
@@ -106,10 +113,17 @@ while True:
     if not is_holding and last_tap_time > 0 and time.ticks_diff(current_time, last_tap_time) > max_tap_interval * 2:
         # Only reset if we're still waiting for pattern completion
         if pattern_state < 2 and tap_count < 2:
-            print("Pattern timeout, resetting")
+            if not timeout_message_printed:
+                print("Pattern timeout, resetting")
+                timeout_message_printed = True
+            pattern_state = 0
+            tap_count = 0
+        elif pattern_state == 1 or pattern_state == 2:
+            if not timeout_message_printed:
+                print("Pattern timeout while waiting for long hold or single tap, resetting")
+                timeout_message_printed = True
             pattern_state = 0
             tap_count = 0
     
     # Sleep a bit to save power
     time.sleep_ms(10)
-    

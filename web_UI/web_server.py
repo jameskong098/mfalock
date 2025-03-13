@@ -51,7 +51,8 @@ def setup_pico_connection():
         capture_output=True, 
         text=True
     )
-    if "MicroPython Board in FS mode" not in result.stdout:
+
+    if "MicroPython Board in FS mode" and "2e8a:0005" not in result.stdout:
         logger.error("Could not find Pico device. Please check connection.")
         return False
     
@@ -68,43 +69,43 @@ def check_and_copy_touch_lock():
         return False
     
     try:
-        # Check if touch_lock.py exists on the Pico
-        logger.info("Checking if touch_lock.py exists on Pico...")
-        result = subprocess.run(
-            ["mpremote", "ls"],
+        # Always copy the latest version of touch_lock.py to the Pico
+        logger.info("Copying touch_lock.py to Pico...")
+        
+        # Get the path to touch_lock.py in the touch_sensor directory
+        touch_lock_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "touch_sensor",
+            "touch_lock.py"
+        )
+        
+        if not os.path.exists(touch_lock_path):
+            logger.error(f"Cannot find source file at {touch_lock_path}")
+            return False
+        
+        # Delete the existing touch_lock.py file on the Pico if it exists
+        delete_result = subprocess.run(
+            ["mpremote", "rm", ":touch_lock.py"],
             capture_output=True,
             text=True
         )
         
-        if "touch_lock.py" not in result.stdout:
-            logger.info("touch_lock.py not found on Pico. Copying file...")
-            
-            # Get the path to touch_lock.py in the touch_sensor directory
-            touch_lock_path = os.path.join(
-                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                "touch_sensor",
-                "touch_lock.py"
-            )
-            
-            if not os.path.exists(touch_lock_path):
-                logger.error(f"Cannot find source file at {touch_lock_path}")
-                return False
-            
-            # Copy the file to the Pico
-            copy_result = subprocess.run(
-                ["mpremote", "cp", touch_lock_path, ":touch_lock.py"],
-                capture_output=True,
-                text=True
-            )
-            
-            if copy_result.returncode != 0:
-                logger.error(f"Failed to copy touch_lock.py: {copy_result.stderr}")
-                return False
-            
-            logger.info("Successfully copied touch_lock.py to Pico")
-        else:
-            logger.info("touch_lock.py already exists on Pico")
+        if delete_result.returncode != 0 and "No such file or directory" not in delete_result.stderr:
+            logger.error(f"Failed to delete existing touch_lock.py: {delete_result.stderr}")
+            return False
         
+        # Copy the file to the Pico
+        copy_result = subprocess.run(
+            ["mpremote", "cp", touch_lock_path, ":touch_lock.py"],
+            capture_output=True,
+            text=True
+        )
+        
+        if copy_result.returncode != 0:
+            logger.error(f"Failed to copy touch_lock.py: {copy_result.stderr}")
+            return False
+        
+        logger.info("Successfully copied touch_lock.py to Pico")
         return True
     except Exception as e:
         logger.error(f"Error checking or copying touch_lock.py: {e}")
@@ -323,3 +324,4 @@ if __name__ == '__main__':
     port = 8080
     logger.info(f"Starting web server on http://{host}:{port}")
     socketio.run(app, host=host, port=port, debug=True, use_reloader=False)
+    
