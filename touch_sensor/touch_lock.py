@@ -84,7 +84,7 @@ while True:
                         pattern_state = 2
                         last_tap_time = current_time  # Update last_tap_time to start timing for the next state
                     else:
-                        print(f"Hold too short ({tap_duration}ms), pattern failed")
+                        print(f"Hold too short ({tap_duration}ms), pattern timeout")
                         pattern_state = 0
                         tap_count = 0
                         timeout_message_printed = False
@@ -100,7 +100,7 @@ while True:
                         tap_count = 0
                         timeout_message_printed = False
                     else:
-                        print("Final tap should be quick, not a hold")
+                        print("Final tap should be quick, not a hold. Pattern timeout")
                         pattern_state = 0
                         tap_count = 0
                         timeout_message_printed = False
@@ -110,8 +110,7 @@ while True:
             last_value = current_value
     
     # Reset pattern if too much time passes between actions
-    if not is_holding and last_tap_time > 0 and time.ticks_diff(current_time, last_tap_time) > max_tap_interval * 2:
-        # Only reset if we're still waiting for pattern completion
+    if pattern_state != 0 and not is_holding and last_tap_time > 0 and time.ticks_diff(current_time, last_tap_time) > max_tap_interval * 2:
         if pattern_state < 2 and tap_count < 2:
             if not timeout_message_printed:
                 print("Pattern timeout, resetting")

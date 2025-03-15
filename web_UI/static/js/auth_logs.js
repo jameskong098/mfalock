@@ -8,7 +8,8 @@ document.addEventListener('DOMContentLoaded', function() {
     fetch('/api/logs')
         .then(response => response.json())
         .then(data => {
-            authLogs = data;
+            // Sort logs by timestamp in descending order (newest first)
+            authLogs = data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
             populateLogs(authLogs);
             
             // Set today's date as default end date
@@ -37,6 +38,7 @@ document.addEventListener('DOMContentLoaded', function() {
             endDate.setHours(23, 59, 59, 999);
         }
         
+        // Make sure filtered logs are also sorted by date (newest first)
         const filteredLogs = authLogs.filter(log => {
             const logTimestamp = new Date(log.timestamp);
             
@@ -49,7 +51,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                      (!endDate || logTimestamp <= endDate);
             
             return matchesSearch && matchesDateRange;
-        });
+        }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
         
         populateLogs(filteredLogs);
     });

@@ -8,7 +8,7 @@ function formatDate(date) {
 // WebSocket connection for real-time updates
 let socket;
 // Status check interval (in milliseconds)
-const STATUS_CHECK_INTERVAL = 2000;
+const STATUS_CHECK_INTERVAL = 500;
 let statusCheckTimer;
 
 document.addEventListener('DOMContentLoaded', function() {

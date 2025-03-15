@@ -30,6 +30,7 @@ logging.basicConfig(
     handlers=[logging.StreamHandler()]
 )
 logger = logging.getLogger("MFALock")
+logging.getLogger('werkzeug').setLevel(logging.WARNING)  # Only show warnings and errors
 
 # Flask app setup
 app = Flask(__name__)
@@ -44,6 +45,7 @@ auth_log_entries = []
 def setup_pico_connection():
     """Establish connection to the Pico device using mpremote"""
     global pico_connected
+    pico_id = "2e8a:0005"  # Pico USB device ID
     
     # Check if Pico is available
     result = subprocess.run(
@@ -52,7 +54,7 @@ def setup_pico_connection():
         text=True
     )
 
-    if "MicroPython Board in FS mode" and "2e8a:0005" not in result.stdout:
+    if pico_id not in result.stdout:
         logger.error("Could not find Pico device. Please check connection.")
         pico_connected = False
         return False
@@ -113,7 +115,7 @@ def check_and_copy_touch_lock():
         return False
 
 def run_touch_lock():
-    """Send command to run the touch lock program on the Pico"""
+    """Send command to run the touch lock program on the Pico asynchronously."""
     if not pico_connected:
         logger.error("Pico is not connected. Cannot run touch lock program.")
         return False
@@ -177,7 +179,7 @@ def monitor_pico():
                     socketio.emit('auth_event', log_entry)
                 
                 # Detect failed attempts
-                elif any(x in line for x in ["pattern failed", "Pattern timeout", "too short", "Final tap should be quick"]):
+                elif "timeout" in line:
                     log_entry = {
                         'id': len(auth_log_entries) + 1,
                         'timestamp': datetime.now().isoformat(),
@@ -211,26 +213,37 @@ def pico_connection_thread():
     reconnection_interval = 2  # seconds between reconnection attempts
     
     while True:
+        # Check connection status - whether initially connected or reconnected
+        was_connected = pico_connected
+        
         if not pico_connected:
             logger.info("Attempting to connect to Pico...")
-            if setup_pico_connection():
-                logger.info("Pico connected. Setting up touch lock...")
-                if check_and_copy_touch_lock():
-                    if run_touch_lock():
-                        monitor_pico()
-                    else:
-                        logger.error("Failed to start touch lock program")
-                else:
-                    logger.error("Failed to check or copy touch_lock.py to Pico")
+            pico_connected = setup_pico_connection()
+        
+        # If connected now (either initially or after reconnect), proceed with setup
+        if pico_connected:
+            logger.info("Pico connected. Setting up touch lock...")
+            if check_and_copy_touch_lock():
+                try:
+                    # Create a launcher script that runs touch_lock in the background
+                    launcher_script = 'import _thread\ntry: _thread.start_new_thread(lambda: __import__("touch_lock"), ())\nexcept Exception as e: print("Error starting touch_lock:", e)'
+                    
+                    logger.info("Creating background job to run touch_lock")
+                    subprocess.run(["mpremote", "exec", launcher_script], check=True, timeout=2)
+                    
+                    logger.info("Starting to monitor Pico output...")
+                    monitor_pico()
+                except Exception as e:
+                    logger.error(f"Failed to start touch lock program: {e}")
+                    pico_connected = False
             else:
-                logger.warning(f"No Pico detected. Will retry in {reconnection_interval} seconds...")
+                logger.error("Failed to check or copy touch_lock.py to Pico")
+                pico_connected = False
+        else:
+            logger.warning(f"No Pico detected. Will retry in {reconnection_interval} seconds...")
         
         # Sleep before next connection check
         time.sleep(reconnection_interval)
-        
-        # If we get here, it means monitor_pico() has exited
-        # (either due to error or disconnection)
-        pico_connected = False
 
 # Route handlers for different pages
 @app.route('/')
@@ -325,4 +338,3 @@ if __name__ == '__main__':
     port = 8080
     logger.info(f"Starting web server on http://{host}:{port}")
     socketio.run(app, host=host, port=port, debug=True, use_reloader=False)
-    
