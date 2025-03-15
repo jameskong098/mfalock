@@ -30,7 +30,6 @@ logging.basicConfig(
     handlers=[logging.StreamHandler()]
 )
 logger = logging.getLogger("MFALock")
-logging.getLogger('werkzeug').setLevel(logging.WARNING)  # Only show warnings and errors
 
 # Flask app setup
 app = Flask(__name__)
@@ -210,17 +209,26 @@ def monitor_pico():
 def pico_connection_thread():
     """Thread to handle Pico connection and monitoring"""
     global pico_connected
-    reconnection_interval = 2  # seconds between reconnection attempts
+    reconnection_interval = 1  # seconds between reconnection attempts
     
     while True:
         # Check connection status - whether initially connected or reconnected
         was_connected = pico_connected
         
-        if not pico_connected:
-            logger.info("Attempting to connect to Pico...")
-            pico_connected = setup_pico_connection()
+        # Check if Pico is connected
+        current_connected = setup_pico_connection()
         
-        # If connected now (either initially or after reconnect), proceed with setup
+        # If connection status changed, notify clients
+        if current_connected != was_connected:
+            pico_connected = current_connected
+            logger.info(f"Pico connection status changed: {'Connected' if pico_connected else 'Disconnected'}")
+            socketio.emit('status_update', {
+                'pico_connected': pico_connected,
+                'auth_success_count': sum(1 for log in auth_log_entries if log['status'] == 'success'),
+                'auth_failure_count': sum(1 for log in auth_log_entries if log['status'] == 'failure')
+            })
+        
+        # If connected, set up and monitor the Pico
         if pico_connected:
             logger.info("Pico connected. Setting up touch lock...")
             if check_and_copy_touch_lock():
@@ -236,9 +244,19 @@ def pico_connection_thread():
                 except Exception as e:
                     logger.error(f"Failed to start touch lock program: {e}")
                     pico_connected = False
+                    socketio.emit('status_update', {
+                        'pico_connected': False,
+                        'auth_success_count': sum(1 for log in auth_log_entries if log['status'] == 'success'),
+                        'auth_failure_count': sum(1 for log in auth_log_entries if log['status'] == 'failure')
+                    })
             else:
                 logger.error("Failed to check or copy touch_lock.py to Pico")
                 pico_connected = False
+                socketio.emit('status_update', {
+                    'pico_connected': False,
+                    'auth_success_count': sum(1 for log in auth_log_entries if log['status'] == 'success'),
+                    'auth_failure_count': sum(1 for log in auth_log_entries if log['status'] == 'failure')
+                })
         else:
             logger.warning(f"No Pico detected. Will retry in {reconnection_interval} seconds...")
         
@@ -280,15 +298,6 @@ def users():
 def get_logs():
     """API endpoint to get authentication logs"""
     return jsonify(auth_log_entries)
-
-@app.route('/api/pico_status')
-def get_status():
-    """API endpoint to check system status"""
-    return jsonify({
-        'pico_connected': pico_connected,
-        'auth_success_count': sum(1 for log in auth_log_entries if log['status'] == 'success'),
-        'auth_failure_count': sum(1 for log in auth_log_entries if log['status'] == 'failure')
-    })
 
 @app.route('/api/settings', methods=['GET', 'POST'])
 def handle_settings():

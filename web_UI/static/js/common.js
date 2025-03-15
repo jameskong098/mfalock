@@ -7,17 +7,8 @@ function formatDate(date) {
 
 // WebSocket connection for real-time updates
 let socket;
-// Status check interval (in milliseconds)
-const STATUS_CHECK_INTERVAL = 500;
-let statusCheckTimer;
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Initial status check
-    checkPicoStatus();
-    
-    // Setup periodic status checking
-    statusCheckTimer = setInterval(checkPicoStatus, STATUS_CHECK_INTERVAL);
-    
     // Setup WebSocket connection if SocketIO is available
     if (typeof io !== 'undefined') {
         socket = io.connect(window.location.origin);
@@ -28,6 +19,12 @@ document.addEventListener('DOMContentLoaded', function() {
         
         socket.on('disconnect', function() {
             console.log('WebSocket disconnected');
+            // Update UI to show disconnected state
+            const picoStatus = document.getElementById('pico-status');
+            if (picoStatus) {
+                picoStatus.className = 'status-indicator failure';
+                picoStatus.querySelector('.status-text').textContent = 'Server Disconnected';
+            }
         });
         
         socket.on('status_update', function(data) {
@@ -39,18 +36,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
-
-// Check Pico status via API endpoint
-function checkPicoStatus() {
-    fetch('/api/pico_status')
-        .then(response => response.json())
-        .then(data => {
-            updateStatusIndicators(data);
-        })
-        .catch(error => {
-            console.error('Error fetching Pico status:', error);
-        });
-}
 
 // Update status indicators based on data from server
 function updateStatusIndicators(data) {

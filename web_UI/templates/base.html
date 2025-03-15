@@ -38,6 +38,8 @@
         {% block content %}{% endblock %}
     </div>
     
+    <script src="{{ url_for('static', filename='js/socket.io.min-v4.8.1.js') }}"></script>
+    
     <script src="{{ url_for('static', filename='js/common.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>

@@ -1,16 +1,6 @@
 // Dashboard specific JavaScript
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Fetch initial status
-    fetch('/api/status')
-        .then(response => response.json())
-        .then(data => {
-            updateStatusIndicators(data);
-        })
-        .catch(error => {
-            console.error('Error fetching status:', error);
-        });
-        
+document.addEventListener('DOMContentLoaded', function() {        
     // Listen for real-time auth events
     if (typeof socket !== 'undefined') {
         socket.on('auth_event', function(data) {
