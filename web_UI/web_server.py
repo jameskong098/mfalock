@@ -22,6 +22,7 @@ import subprocess
 from datetime import datetime
 from flask import Flask, render_template, jsonify, request, send_from_directory
 from flask_socketio import SocketIO, emit
+import uuid
 
 # Configure logging
 logging.basicConfig(
@@ -39,7 +40,25 @@ socketio = SocketIO(app)
 # Global variables
 pico_connected = False
 pico_process = None
-auth_log_entries = [] 
+LOG_FILE_PATH = "auth_logs.json" 
+
+
+def load_logs():
+    """Load logs from the log file."""
+    if os.path.exists(LOG_FILE_PATH):
+        with open(LOG_FILE_PATH, 'r') as file:
+            return json.load(file)
+    return []
+
+
+def save_logs(logs):
+    """Save logs to the log file."""
+    with open(LOG_FILE_PATH, 'w') as file:
+        json.dump(logs, file, indent=4)
+
+
+auth_log_entries = load_logs()
+
 
 def setup_pico_connection():
     """Establish connection to the Pico device using mpremote"""
@@ -167,7 +186,7 @@ def monitor_pico():
                 # Process authentication events
                 if "ACCESS GRANTED" in line:
                     log_entry = {
-                        'id': len(auth_log_entries) + 1,
+                        'id': str(uuid.uuid4()),
                         'timestamp': datetime.now().isoformat(),
                         'user': 'User',
                         'location': 'Main Entrance',
@@ -175,12 +194,13 @@ def monitor_pico():
                         'details': 'Pattern recognized correctly'
                     }
                     auth_log_entries.append(log_entry)
+                    save_logs(auth_log_entries)
                     socketio.emit('auth_event', log_entry)
                 
                 # Detect failed attempts
                 elif "timeout" in line:
                     log_entry = {
-                        'id': len(auth_log_entries) + 1,
+                        'id': str(uuid.uuid4()),
                         'timestamp': datetime.now().isoformat(),
                         'user': 'Unknown',
                         'location': 'Main Entrance',
@@ -188,6 +208,7 @@ def monitor_pico():
                         'details': f'Incorrect pattern: {line}'
                     }
                     auth_log_entries.append(log_entry)
+                    save_logs(auth_log_entries)
                     socketio.emit('auth_event', log_entry)
             
             time.sleep(0.1)
@@ -298,6 +319,21 @@ def users():
 def get_logs():
     """API endpoint to get authentication logs"""
     return jsonify(auth_log_entries)
+
+@app.route('/api/logs/<string:log_id>', methods=['DELETE'])
+def delete_log(log_id):
+    """API endpoint to delete a specific log by its ID"""
+    global auth_log_entries
+    # Find the log with the given ID
+    log_to_delete = next((log for log in auth_log_entries if log['id'] == log_id), None)
+    if log_to_delete:
+        # Remove the log from the list
+        auth_log_entries = [log for log in auth_log_entries if log['id'] != log_id]
+        save_logs(auth_log_entries)
+        logger.info(f"Deleted log with ID {log_id}")
+        return jsonify({'status': 'success', 'message': f'Log with ID {log_id} deleted'}), 200
+    else:
+        return jsonify({'status': 'error', 'message': 'Log not found'}), 404
 
 @app.route('/api/settings', methods=['GET', 'POST'])
 def handle_settings():

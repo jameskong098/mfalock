@@ -4,21 +4,19 @@
 <section id="dashboard">
     <div class="card">
         <h2 class="section-title">Security Dashboard</h2>
+        <p style="text-align: center; color: var(--secondary-color); font-weight: bold;">
+            Showing data for: <span id="current-date"></span>
+        </p>
         <div class="stats">
             <div class="stat-card">
                 <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
-                <div class="stat-value" id="successful-auth-count">24</div>
+                <div class="stat-value" id="successful-auth-count">0</div>
                 <div class="stat-label">Successful Authentications</div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
-                <div class="stat-value" id="failed-auth-count">7</div>
+                <div class="stat-value" id="failed-auth-count">0</div>
                 <div class="stat-label">Failed Attempts</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon"><i class="fas fa-shield-alt"></i></div>
-                <div class="stat-value" id="security-level">High</div>
-                <div class="stat-label">Security Level</div>
             </div>
         </div>
     </div>
