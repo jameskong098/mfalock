@@ -50,7 +50,7 @@ The web server is pre-configured with default settings. You can modify the follo
 
 Ensure the touch sensor is connected to the Raspberry Pi Pico correctly. Refer to the diagram below for proper wiring:
 
-![Touch Sensor Setup](images/touch_setup.png)
+![Touch Sensor Setup](static/images/touch_setup.png)
 
 - Connect the capacitive touch sensor to GPIO pin 26 on the Pico.
 - Ensure all connections are secure and the sensor is functioning properly before starting the server.
