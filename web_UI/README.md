@@ -34,7 +34,7 @@ This web server provides an interface to monitor and control the MFA Lock, a tou
     cd mfalock/web_UI
     ```
 
-3. Install the required packages:
+2. Install the required packages:
     ```bash
     pip install flask flask-socketio pyserial
     ```
@@ -43,15 +43,23 @@ This web server provides an interface to monitor and control the MFA Lock, a tou
 
 The web server is pre-configured with default settings. You can modify the following parameters in `web_server.py` if needed:
 
-- `BAUD_RATE` (default: 115200) - Serial communication speed with the Pico
-- `SERIAL_TIMEOUT` (default: 1.0) - Timeout for serial communication
+- `LOG_FILE_PATH` (default: `auth_logs.json`) - Path to the authentication logs file
 - Web server port (default: 8080)
+
+## Hardware Setup
+
+Ensure the touch sensor is connected to the Raspberry Pi Pico correctly. Refer to the diagram below for proper wiring:
+
+![Touch Sensor Setup](images/touch_setup.png)
+
+- Connect the capacitive touch sensor to GPIO pin 26 on the Pico.
+- Ensure all connections are secure and the sensor is functioning properly before starting the server.
 
 ## Running the Server
 
-1. Connect your Raspberry Pi Pico to your computer via USB
+1. Connect your Raspberry Pi Pico to your computer via USB.
 
-2. Ensure the touch_lock.py file is available on the Pico
+2. Ensure the `touch_lock.py` file is available on the Pico. The server will automatically copy the latest version if needed.
 
 3. Start the web server:
     ```bash
@@ -74,22 +82,52 @@ The web server is pre-configured with default settings. You can modify the follo
 
 If the server cannot connect to the Pico:
 
-1. Check that the Pico is properly connected via USB
-2. Verify the touch_lock.py file is loaded on the Pico
-3. Ensure no other programs are using the serial port
-4. Try disconnecting and reconnecting the Pico
+1. Check that the Pico is properly connected via USB.
+2. Verify the `touch_lock.py` file is loaded on the Pico. The server will attempt to copy it automatically.
+3. Ensure no other programs are using the serial port.
+4. Try disconnecting and reconnecting the Pico.
 
 ### Web Interface Issues
 
 If the web interface is not responding:
 
-1. Check that the server is running without errors
-2. Ensure your firewall allows connections on port 8080
-3. Try a different web browser
-4. Clear your browser cache
+1. Check that the server is running without errors.
+2. Ensure your firewall allows connections on port 8080.
+3. Try a different web browser.
+4. Clear your browser cache.
 
 ## API Endpoints
 
 - `/api/logs` - Get authentication logs
-- `/api/status` - Get system status
-- `/api/settings` - Get or update settings
+- `/api/logs/<log_id>` (DELETE) - Delete a specific log by its ID
+- `/api/settings` - Get or update system settings
+
+## Real-Time Updates
+
+The web UI uses WebSocket integration (via Flask-SocketIO) to provide real-time updates for:
+
+- Authentication events (success or failure)
+- Pico connection status
+- Authentication statistics (success and failure counts)
+
+## Pages
+
+- **Dashboard**: Displays system status, authentication statistics, and live authentication events.
+- **Authentication Logs**: Allows users to view and filter historical access logs.
+- **How It Works**: Provides an interactive demonstration of the touch pattern required for authentication.
+- **Settings**: Enables configuration of system parameters, such as security level and notification preferences.
+
+## System Requirements
+
+- **Hardware**:
+  - Raspberry Pi Pico
+  - Capacitive touch sensor connected to GPIO pin 26
+- **Software**:
+  - Python 3.7 or higher
+  - Flask, Flask-SocketIO, and PySerial libraries
+  - `mpremote` for communication with the Pico
+
+## Additional Notes
+
+- The server automatically monitors the Pico's output for authentication events and updates the logs in real time.
+- The `touch_lock.py` file is copied to the Pico if it is not already present or if an updated version is available.

@@ -1,12 +1,7 @@
 """
 Touch Sensor Pattern Lock
 -------------------------
-This program implements a touch-based security mechanism that recognizes a specific pattern:
-- Double tap
-- Long hold (at least 1 second)
-- Single tap
-
-When the correct pattern is entered, the system grants access.
+This program implements a touch-based security mechanism that recognizes a custom pattern.
 
 Hardware:
 - Microcontroller (Raspberry Pi Pico or similar)
@@ -22,21 +17,21 @@ import time
 
 pin_sensor = Pin(26, mode=Pin.IN, pull=Pin.PULL_UP)
 
-# Pattern: double tap + long hold + single tap
+# Define the custom pattern
+# Each step is a tuple: ("action", "duration")
+# "action" can be "tap" or "hold"
+# "duration" is the minimum duration for "hold" or 0 for "tap"
+#custom_pattern = [("tap", 0), ("tap", 0), ("hold", 1000), ("tap", 0)]
+custom_pattern = [("tap", 0), ("hold", 1000), ("tap", 0)]
 
-pattern_buffer = []
+# Pattern state variables
+current_step = 0
 last_value = 0
 touch_start_time = 0
 last_tap_time = 0
 debounce_time = 50  # 50ms debounce to prevent false readings
 max_tap_interval = 500  # Maximum time between taps (500ms)
-min_hold_duration = 1000  # Minimum hold duration (1s)
-tap_count = 0
-pattern_state = 0  # 0: waiting for double tap, 1: waiting for hold, 2: waiting for single tap
-in_sequence = False
 is_holding = False
-
-# Add a flag to track if timeout message has been printed
 timeout_message_printed = False
 
 while True:
@@ -59,70 +54,36 @@ while True:
                 print(f"Touch ended: {tap_duration}ms")
                 is_holding = False
                 
-                # State machine for pattern detection
-                if pattern_state == 0:  # Waiting for double tap
-                    # First tap or continuing a sequence
-                    if last_tap_time == 0 or time.ticks_diff(current_time, last_tap_time) <= max_tap_interval:
-                        tap_count += 1
-                        print(f"Double tap progress: {tap_count}/2")
-                        
-                        # Check if double tap completed
-                        if tap_count == 2:
-                            print("Double tap complete, now waiting for long hold")
-                            pattern_state = 1
-                            tap_count = 0
+                # Process the current step in the pattern
+                if current_step < len(custom_pattern):
+                    action, duration = custom_pattern[current_step]
+                    
+                    if action == "tap" and tap_duration:
+                        print(f"Step {current_step + 1}: Tap detected")
+                        current_step += 1
+                    elif action == "hold" and tap_duration >= duration:
+                        print(f"Step {current_step + 1}: Hold detected ({tap_duration}ms)")
+                        current_step += 1
                     else:
-                        # Reset if too much time between taps
-                        print("Tap timeout, resetting double tap sequence")
-                        tap_count = 1
-                        print(f"Double tap progress: {tap_count}/2")
+                        print(f"Step {current_step + 1}: Incorrect input, resetting pattern")
+                        current_step = 0
                 
-                elif pattern_state == 1:  # Waiting for long hold
-                    # Check if the hold was long enough
-                    if tap_duration >= min_hold_duration:
-                        print(f"Long hold complete ({tap_duration}ms), now waiting for single tap")
-                        pattern_state = 2
-                        last_tap_time = current_time  # Update last_tap_time to start timing for the next state
-                    else:
-                        print(f"Hold too short ({tap_duration}ms), pattern timeout")
-                        pattern_state = 0
-                        tap_count = 0
-                        timeout_message_printed = False
-                
-                elif pattern_state == 2:  # Waiting for final single tap
-                    # Check if this is a quick tap (not another long hold)
-                    if tap_duration < min_hold_duration:
-                        print("Single tap detected, pattern complete!")
-                        print("ACCESS GRANTED")
-                        
-                        # Reset pattern detection
-                        pattern_state = 0
-                        tap_count = 0
-                        timeout_message_printed = False
-                    else:
-                        print("Final tap should be quick, not a hold. Pattern timeout")
-                        pattern_state = 0
-                        tap_count = 0
-                        timeout_message_printed = False
+                # Check if the pattern is complete
+                if current_step == len(custom_pattern):
+                    print("Custom pattern complete!")
+                    print("ACCESS GRANTED")
+                    current_step = 0  # Reset for the next attempt
                 
                 last_tap_time = current_time
             
             last_value = current_value
     
     # Reset pattern if too much time passes between actions
-    if pattern_state != 0 and not is_holding and last_tap_time > 0 and time.ticks_diff(current_time, last_tap_time) > max_tap_interval * 2:
-        if pattern_state < 2 and tap_count < 2:
-            if not timeout_message_printed:
-                print("Pattern timeout, resetting")
-                timeout_message_printed = True
-            pattern_state = 0
-            tap_count = 0
-        elif pattern_state == 1 or pattern_state == 2:
-            if not timeout_message_printed:
-                print("Pattern timeout while waiting for long hold or single tap, resetting")
-                timeout_message_printed = True
-            pattern_state = 0
-            tap_count = 0
+    if current_step > 0 and not is_holding and last_tap_time > 0 and time.ticks_diff(current_time, last_tap_time) > max_tap_interval * 2:
+        if not timeout_message_printed:
+            print("Pattern timeout, resetting")
+            timeout_message_printed = True
+        current_step = 0
     
     # Sleep a bit to save power
     time.sleep_ms(10)
