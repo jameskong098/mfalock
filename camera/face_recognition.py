@@ -3,7 +3,7 @@ import cv2
 from picamera2 import Picamera2
 import numpy as np
 
-known_image = face_recognition.load_image_file("")
+known_image = face_recognition.load_image_file("yunus2.jpg")
 known_encoding = face_recognition.face_encodings(known_image)[0]
 
 picam2 = Picamera2()
