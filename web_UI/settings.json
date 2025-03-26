@@ -1,0 +1,24 @@
+{
+    "securityLevel": "high",
+    "notificationEmail": "",
+    "notifySuccess": false,
+    "notifyFailure": true,
+    "customPattern": [
+        {
+            "action": "tap",
+            "duration": 0
+        },
+        {
+            "action": "hold",
+            "duration": 1443
+        },
+        {
+            "action": "tap",
+            "duration": 0
+        },
+        {
+            "action": "tap",
+            "duration": 0
+        }
+    ]
+}

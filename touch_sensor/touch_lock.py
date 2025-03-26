@@ -14,15 +14,89 @@ Date: February 27, 2025
 
 from machine import Pin
 import time
+import sys
+import json
+import os
 
 pin_sensor = Pin(26, mode=Pin.IN, pull=Pin.PULL_UP)
 
-# Define the custom pattern
+# Define the default custom pattern - only used if no custom pattern provided
 # Each step is a tuple: ("action", "duration")
 # "action" can be "tap" or "hold"
 # "duration" is the minimum duration for "hold" or 0 for "tap"
-#custom_pattern = [("tap", 0), ("tap", 0), ("hold", 1000), ("tap", 0)]
-custom_pattern = [("tap", 0), ("hold", 1000), ("tap", 0)]
+DEFAULT_PATTERN = [("tap", 0), ("hold", 1000), ("tap", 0)]
+
+# Start with default pattern, will try to override with custom settings
+custom_pattern = DEFAULT_PATTERN
+
+# Function to load pattern from JSON file
+def load_pattern_from_file(filepath):
+    try:
+        # Check if file exists
+        try:
+            stat = os.stat(filepath)
+            if stat[6] == 0:  # Size is 0
+                print(f"Pattern file is empty: {filepath}")
+                return None
+        except OSError:
+            print(f"Pattern file not found: {filepath}")
+            return None
+            
+        # Open and read the file
+        with open(filepath, 'r') as f:
+            data = json.load(f)
+            
+        # Extract pattern from the data
+        if 'pattern' in data and isinstance(data['pattern'], list) and len(data['pattern']) > 0:
+            # Convert the JSON format to tuple format
+            pattern = []
+            for step in data['pattern']:
+                if isinstance(step, dict) and 'action' in step and 'duration' in step:
+                    pattern.append((step['action'], step['duration']))
+            
+            if len(pattern) > 0:
+                print(f"Loaded pattern from {filepath} with {len(pattern)} steps")
+                return pattern
+                
+        print("No valid pattern found in file")
+        return None
+    except Exception as e:
+        print(f"Error loading pattern from file: {e}")
+        return None
+
+# Priority 1: Try to load from custom_pattern.json
+pattern_file_path = "custom_pattern.json"
+file_pattern = load_pattern_from_file(pattern_file_path)
+if file_pattern:
+    custom_pattern = file_pattern
+    print("Using pattern from custom_pattern.json")
+
+# Priority 2: Check if a custom pattern was provided as an argument (overrides file)
+if len(sys.argv) > 1:
+    try:
+        # Parse the argument as JSON
+        pattern_arg = sys.argv[1]
+        pattern_data = json.loads(pattern_arg)
+        
+        # Convert to the expected format
+        if isinstance(pattern_data, list):
+            arg_pattern = []
+            for step in pattern_data:
+                if isinstance(step, dict) and "action" in step and "duration" in step:
+                    arg_pattern.append((step["action"], step["duration"]))
+            
+            if arg_pattern:
+                custom_pattern = arg_pattern
+                print(f"Using provided command-line pattern with {len(custom_pattern)} steps")
+            
+    except Exception as e:
+        print(f"Error parsing pattern argument: {e}")
+        
+# If we still don't have a valid pattern, log that we're using the default
+if custom_pattern == DEFAULT_PATTERN:
+    print("Using built-in default pattern")
+
+print(f"Active pattern: {custom_pattern}")
 
 # Pattern state variables
 current_step = 0
@@ -84,6 +158,9 @@ while True:
             print("Pattern timeout, resetting")
             timeout_message_printed = True
         current_step = 0
+        timeout_message_printed = False  # Reset timeout message flag
+    elif current_step == 0:
+        timeout_message_printed = False  # Reset flag when pattern is reset
     
     # Sleep a bit to save power
     time.sleep_ms(10)
