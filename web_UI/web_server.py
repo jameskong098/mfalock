@@ -271,6 +271,28 @@ def pico_connection_thread():
             logger.info("Pico connected. Setting up touch lock...")
             if check_and_copy_touch_lock():
                 try:
+                    # Check if a custom pattern file exists and copy it to the Pico
+                    pattern_file_path = os.path.join(
+                        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                        "touch_sensor",
+                        "custom_pattern.json"
+                    )
+                    
+                    if os.path.exists(pattern_file_path):
+                        logger.info("Found existing custom pattern file, copying to Pico...")
+                        copy_result = subprocess.run(
+                            ["mpremote", "cp", pattern_file_path, ":custom_pattern.json"],
+                            capture_output=True,
+                            text=True
+                        )
+                        
+                        if copy_result.returncode == 0:
+                            logger.info("Successfully copied custom pattern file to Pico")
+                        else:
+                            logger.error(f"Failed to copy custom pattern file: {copy_result.stderr}")
+                    else:
+                        logger.info("No custom pattern file found, Pico will use default pattern")
+                    
                     # Create a launcher script that runs touch_lock in the background
                     pattern_json = json.dumps(settings['customPattern'])
                     launcher_script = (
@@ -421,7 +443,7 @@ def update_touch_lock_pattern(custom_pattern):
         return False
     
     try:
-        # Get the path to the original touch_lock.py
+        # Get the path to the touch_lock.py file
         touch_lock_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
             "touch_sensor",
@@ -432,39 +454,158 @@ def update_touch_lock_pattern(custom_pattern):
             logger.error(f"Cannot find source file at {touch_lock_path}")
             return False
         
-        # Copy the original touch_lock.py to the Pico if it's not already there
-        if not check_and_copy_touch_lock():
-            logger.error("Failed to copy touch_lock.py to Pico")
-            return False
-            
-        # Now also copy the custom_pattern.json file to the Pico
-        logger.info("Copying custom_pattern.json to Pico...")
-        copy_result = subprocess.run(
-            ["mpremote", "cp", pattern_file_path, ":custom_pattern.json"],
-            capture_output=True,
-            text=True
-        )
+        # Perform a complete reboot of the Pico - this is more reliable than soft reset
+        logger.info("Performing complete reboot of the Pico...")
         
-        if copy_result.returncode != 0:
-            logger.error(f"Failed to copy custom_pattern.json: {copy_result.stderr}")
-            return False
-            
-        logger.info("Successfully copied custom_pattern.json to Pico")
+        # First attempt a clean shutdown of any running processes
+        try:
+            subprocess.run(
+                ["mpremote", "exec", "import machine; machine.reset()"],
+                capture_output=True,
+                text=True,
+                timeout=2
+            )
+        except Exception as e:
+            logger.warning(f"Machine reset attempt: {e}")
         
-        # Reset the Pico to load the new pattern
+        # Wait for a moment
+        time.sleep(2)
+        
+        # Now do a hard reset via the tool
+        logger.info("Hard resetting Pico...")
         subprocess.run(
             ["mpremote", "reset"],
             capture_output=True,
             text=True
         )
         
-        # Wait a moment for the reset
+        # Wait for Pico to reconnect with a longer timeout
+        logger.info("Waiting for Pico to reconnect after reset...")
+        reconnect_attempts = 0
+        max_attempts = 15  # Increased from 10
+        reconnected = False
+        
+        while reconnect_attempts < max_attempts and not reconnected:
+            time.sleep(2)  # Increased wait time between attempts
+            reconnect_attempts += 1
+            
+            logger.info(f"Reconnection attempt {reconnect_attempts}/{max_attempts}...")
+            
+            # Check if Pico is connected
+            result = subprocess.run(
+                ["mpremote", "connect", "list"], 
+                capture_output=True, 
+                text=True
+            )
+            
+            if "2e8a:0005" in result.stdout:
+                logger.info("Pico reconnected successfully")
+                reconnected = True
+                # Extra stabilization time
+                logger.info("Allowing Pico to fully stabilize...")
+                time.sleep(4)  # Longer stabilization time
+            else:
+                logger.warning("Pico not yet reconnected, waiting...")
+        
+        if not reconnected:
+            logger.error("Failed to reconnect to Pico after reset")
+            return False
+        
+        # Verify connection is still active
+        verify_result = subprocess.run(
+            ["mpremote", "connect", "list"], 
+            capture_output=True, 
+            text=True
+        )
+        
+        if "2e8a:0005" not in verify_result.stdout:
+            logger.error("Pico connection unstable after reconnection")
+            return False
+            
+        # Clear out any boot.py or main.py that might be auto-starting touch_lock
+        logger.info("Ensuring no auto-start scripts are present...")
+        try:
+            subprocess.run(["mpremote", "rm", ":boot.py"], capture_output=True, text=True)
+        except:
+            pass
+        try:
+            subprocess.run(["mpremote", "rm", ":main.py"], capture_output=True, text=True)
+        except:
+            pass
+        
+        # Clean copy of touch_lock.py to the Pico
+        logger.info("Copying fresh touch_lock.py to Pico...")
+        try:
+            # Delete existing file first
+            subprocess.run(["mpremote", "rm", ":touch_lock.py"], capture_output=True, text=True)
+            time.sleep(0.5)
+            
+            # Copy the file
+            copy_result = subprocess.run(
+                ["mpremote", "cp", touch_lock_path, ":touch_lock.py"],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            logger.info("Successfully copied touch_lock.py to Pico")
+        except Exception as e:
+            logger.error(f"Failed to copy touch_lock.py: {e}")
+            return False
+        
+        # Copy the custom pattern file
+        logger.info("Copying custom_pattern.json to Pico...")
+        try:
+            copy_result = subprocess.run(
+                ["mpremote", "cp", pattern_file_path, ":custom_pattern.json"],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            logger.info("Successfully copied custom_pattern.json to Pico")
+        except Exception as e:
+            logger.error(f"Failed to copy custom_pattern.json: {e}")
+            return False
+        
+        # Wait to ensure files are fully written
         time.sleep(1)
         
-        # Run the touch lock (will now read the local custom_pattern.json on the Pico)
-        subprocess.run(["mpremote", "exec", "import touch_lock"], check=True, timeout=2)
+        # Start touch_lock with a clean environment
+        logger.info("Starting touch_lock with new pattern...")
+        launcher_script = (
+            f'import gc\n'
+            f'gc.collect()\n'
+            f'import sys\n'
+            f'# Clear any modules that might be loaded\n'
+            f'for name in list(sys.modules):\n'
+            f'    if name != "sys" and name != "gc":\n'
+            f'        del sys.modules[name]\n'
+            f'import _thread\n'
+            f'def run_touch_lock():\n'
+            f'    # Import with fresh state\n'
+            f'    __import__("touch_lock")\n'
+            f'try:\n'
+            f'    _thread.start_new_thread(run_touch_lock, ())\n'
+            f'    print("Touch lock started with fresh state")\n'
+            f'except Exception as e:\n'
+            f'    print(f"Error starting touch_lock: {{e}}")\n'
+        )
         
-        logger.info("Successfully updated and restarted touch_lock with custom pattern")
+        # Execute the launcher script
+        try:
+            result = subprocess.run(
+                ["mpremote", "exec", launcher_script], 
+                capture_output=True,
+                text=True,
+                timeout=3
+            )
+            if "Touch lock started with fresh state" in result.stdout:
+                logger.info("Successfully started touch_lock with new pattern")
+            else:
+                logger.warning(f"Unexpected output when starting touch_lock: {result.stdout}")
+        except Exception as e:
+            logger.error(f"Error executing launcher script: {e}")
+            return False
+        
         return True
     except Exception as e:
         logger.error(f"Error updating touch_lock pattern: {e}")
