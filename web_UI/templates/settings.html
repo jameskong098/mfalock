@@ -7,6 +7,16 @@
         
         <form id="settings-form">
             <div class="form-group">
+                <label for="security-level">Upload Image</label>
+                <body>
+                    <h1>Upload</h1>
+                    <form action ="/upload" method="post" enctype="multipart/form-data">
+                        <input type="file" name="picture" accept ="image/*" required>
+                        <button type="submit">Upload</button>
+                    </form>
+                </body>
+            </div>
+            <div class="form-group">
                 <label for="security-level">Security Level</label>
                 <select id="security-level" name="security-level">
                     <option value="low">Low</option>
