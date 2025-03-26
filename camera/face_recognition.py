@@ -3,7 +3,7 @@ import cv2
 from picamera2 import Picamera2
 import numpy as np
 
-known_image = face_recognition.load_image_file("")
+known_image = face_recognition.load_image_file("yunus2.jpg")
 known_encoding = face_recognition.face_encodings(known_image)[0]
 
 picam2 = Picamera2()
@@ -22,12 +22,16 @@ while True:
         matches = face_recognition.compare_faces([known_encoding], face_encoding)
         name = "Unknown"
 
-        if True in matches:
+        if True in matches: 
             name = "Yunus"
+            color = (0, 255, 0)
+        else:
+            name = "unknown"
+            color = (255, 0, 0)
 
         # Draw rectangle around face
-        cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
-        cv2.putText(frame, name, (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+        cv2.rectangle(frame, (left, top), (right, bottom), color, 2)
+        cv2.putText(frame, name, (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
 
     cv2.imshow("Face Recognition", frame)
 
