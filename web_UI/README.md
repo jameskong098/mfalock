@@ -74,7 +74,10 @@ Ensure the touch sensor is connected to the Raspberry Pi Pico correctly. Refer t
     Or to access from another device on the same network:
     ```
     http://[your-computer-ip]:8080
+
     ```
+
+    Use `172.20.102.83` on Brandeis eduroam
 
 ## Troubleshooting
 
