@@ -328,6 +328,31 @@ tr:hover {
     box-shadow: 0 0 0 2px rgba(255, 69, 58, 0.3);
 }
 
+.pattern-step {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    gap: 10px;
+}
+
+.pattern-action {
+    flex: 1;
+}
+
+.pattern-duration {
+    width: 120px;
+}
+
+.pattern-controls {
+    margin-top: 10px;
+}
+
+.help-text {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 5px;
+}
+
 @keyframes pulse {
     0% { transform: scale(1); }
     50% { transform: scale(1.1); }
@@ -365,4 +390,173 @@ tr:hover {
     .search-box, .date-filter {
         width: 100%;
     }
+}
+
+/* Pattern Recorder */
+#pattern-recorder {
+    margin-bottom: 20px;
+}
+
+#pattern-sensor {
+    position: relative;
+    width: 100%;
+    height: 150px;
+    background-color: #f5f5f5;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid #ddd;
+    margin-bottom: 15px;
+}
+
+#pattern-sensor.recording {
+    border-color: #ff6b6b;
+}
+
+#pattern-sensor.touching {
+    background-color: #e0e0e0;
+}
+
+.sensor-circle {
+    width: 60px;
+    height: 60px;
+    background-color: #ddd;
+    border-radius: 50%;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+#pattern-sensor.touching .sensor-circle {
+    background-color: #a0a0a0;
+    transform: scale(0.9);
+}
+
+#pattern-sensor.recording .sensor-circle {
+    border: 2px solid #ff6b6b;
+}
+
+.pattern-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+#record-pattern.active {
+    background-color: #ff6b6b;
+    color: white;
+}
+
+#pattern-steps-container {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px;
+    background-color: #f9f9f9;
+    margin-bottom: 15px;
+}
+
+#pattern-steps-container h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+
+.pattern-step-visual {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 8px;
+    border-radius: 4px;
+    background-color: #fff;
+    border-left: 3px solid #ddd;
+}
+
+.pattern-step-visual.tap {
+    border-left-color: #4caf50;
+}
+
+.pattern-step-visual.hold {
+    border-left-color: #2196f3;
+}
+
+.step-icon {
+    margin-right: 10px;
+    font-size: 1.2rem;
+}
+
+.step-text {
+    font-size: 0.9rem;
+}
+
+.empty-pattern {
+    font-style: italic;
+    color: #888;
+    text-align: center;
+}
+
+.manual-pattern-toggle {
+    margin-bottom: 15px;
+}
+
+/* Pattern Step Styling (Manual Entry) */
+.pattern-step {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    gap: 10px;
+}
+
+.pattern-action {
+    flex: 1;
+}
+
+.pattern-duration {
+    width: 120px;
+}
+
+.help-text {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 5px;
+}
+
+/* Notification styles */
+.notification {
+    padding: 10px 15px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    animation: slideDown 0.3s ease-out;
+}
+
+.notification.success {
+    background-color: rgba(76, 175, 80, 0.15);
+    color: #4caf50;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.notification.error {
+    background-color: rgba(255, 69, 58, 0.15);
+    color: #ff453a;
+    border: 1px solid rgba(255, 69, 58, 0.3);
+}
+
+.notification.fade-out {
+    animation: fadeOut 0.5s ease-out forwards;
+}
+
+@keyframes slideDown {
+    0% { transform: translateY(-20px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes fadeOut {
+    0% { opacity: 1; }
+    100% { opacity: 0; }
 }

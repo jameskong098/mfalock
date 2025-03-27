@@ -1,6 +1,9 @@
 # Custom
 .DS_Store
 auth_logs.json
+custom_pattern.json
+settings.json
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

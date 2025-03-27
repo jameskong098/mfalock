@@ -31,6 +31,49 @@
                     <label for="notify-failure">Notify on failed attempts</label>
                 </div>
             </div>
+
+            <div class="form-group">
+                <label>Custom Unlock Pattern</label>
+                
+                <div id="pattern-recorder">
+                    <div id="pattern-sensor">
+                        <div class="sensor-circle"></div>
+                        <p>Tap or hold here to record your pattern</p>
+                    </div>
+                    
+                    <div class="pattern-controls">
+                        <button type="button" id="record-pattern" class="btn">Start Recording</button>
+                        <button type="button" id="clear-pattern" class="btn">Clear Pattern</button>
+                    </div>
+                    
+                    <div id="pattern-steps-container">
+                        <h4>Current Pattern:</h4>
+                        <div id="pattern-steps"></div>
+                    </div>
+                </div>
+                
+                <div class="manual-pattern-toggle">
+                    <button type="button" id="toggle-manual-entry" class="btn small">Manual Entry</button>
+                </div>
+                
+                <div id="manual-pattern-container" style="display: none;">
+                    <div id="pattern-container">
+                        <div class="pattern-step" data-index="0">
+                            <select class="pattern-action">
+                                <option value="tap">Tap</option>
+                                <option value="hold">Hold</option>
+                            </select>
+                            <input type="number" class="pattern-duration" min="0" max="5000" step="100" value="0" placeholder="Duration (ms)">
+                            <button type="button" class="btn small remove-step">Remove</button>
+                        </div>
+                    </div>
+                    <div class="pattern-controls">
+                        <button type="button" id="add-step" class="btn small">Add Step</button>
+                    </div>
+                </div>
+                
+                <p class="help-text">Create your custom pattern with taps and holds. A secure pattern should have at least 3 steps.</p>
+            </div>
             
             <button type="submit" class="btn primary">Save Settings</button>
         </form>

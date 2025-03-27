@@ -23,6 +23,7 @@ from datetime import datetime
 from flask import Flask, render_template, jsonify, request, send_from_directory
 from flask_socketio import SocketIO, emit
 import uuid
+import tempfile
 
 # Configure logging
 logging.basicConfig(
@@ -41,7 +42,7 @@ socketio = SocketIO(app)
 pico_connected = False
 pico_process = None
 LOG_FILE_PATH = "auth_logs.json" 
-
+SETTINGS_FILE_PATH = "settings.json"
 
 def load_logs():
     """Load logs from the log file."""
@@ -50,15 +51,31 @@ def load_logs():
             return json.load(file)
     return []
 
-
 def save_logs(logs):
     """Save logs to the log file."""
     with open(LOG_FILE_PATH, 'w') as file:
         json.dump(logs, file, indent=4)
 
+def load_settings():
+    """Load settings from the settings file."""
+    if os.path.exists(SETTINGS_FILE_PATH):
+        with open(SETTINGS_FILE_PATH, 'r') as file:
+            return json.load(file)
+    return {
+        'securityLevel': 'high',
+        'notificationEmail': '',
+        'notifySuccess': False,
+        'notifyFailure': True,
+        'customPattern': [{"action": "tap", "duration": 0}, {"action": "hold", "duration": 1000}, {"action": "tap", "duration": 0}]
+    }
+
+def save_settings(settings):
+    """Save settings to the settings file."""
+    with open(SETTINGS_FILE_PATH, 'w') as file:
+        json.dump(settings, file, indent=4)
 
 auth_log_entries = load_logs()
-
+settings = load_settings()
 
 def setup_pico_connection():
     """Establish connection to the Pico device using mpremote"""
@@ -254,8 +271,39 @@ def pico_connection_thread():
             logger.info("Pico connected. Setting up touch lock...")
             if check_and_copy_touch_lock():
                 try:
+                    # Check if a custom pattern file exists and copy it to the Pico
+                    pattern_file_path = os.path.join(
+                        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                        "touch_sensor",
+                        "custom_pattern.json"
+                    )
+                    
+                    if os.path.exists(pattern_file_path):
+                        logger.info("Found existing custom pattern file, copying to Pico...")
+                        copy_result = subprocess.run(
+                            ["mpremote", "cp", pattern_file_path, ":custom_pattern.json"],
+                            capture_output=True,
+                            text=True
+                        )
+                        
+                        if copy_result.returncode == 0:
+                            logger.info("Successfully copied custom pattern file to Pico")
+                        else:
+                            logger.error(f"Failed to copy custom pattern file: {copy_result.stderr}")
+                    else:
+                        logger.info("No custom pattern file found, Pico will use default pattern")
+                    
                     # Create a launcher script that runs touch_lock in the background
-                    launcher_script = 'import _thread\ntry: _thread.start_new_thread(lambda: __import__("touch_lock"), ())\nexcept Exception as e: print("Error starting touch_lock:", e)'
+                    pattern_json = json.dumps(settings['customPattern'])
+                    launcher_script = (
+                        f'import _thread\n'
+                        f'import json\n'
+                        f'pattern_arg = \'{pattern_json}\'\n'
+                        f'def run_touch_lock(arg):\n'
+                        f'    __import__("touch_lock", None, None, [], 0)\n'
+                        f'try: _thread.start_new_thread(run_touch_lock, (pattern_arg,))\n'
+                        f'except Exception as e: print("Error starting touch_lock:", e)'
+                    )
                     
                     logger.info("Creating background job to run touch_lock")
                     subprocess.run(["mpremote", "exec", launcher_script], check=True, timeout=2)
@@ -306,7 +354,7 @@ def how_it_works():
     return render_template('how_it_works.html')
 
 @app.route('/settings')
-def settings():
+def settings_page():  # Renamed from "settings" to "settings_page"
     """Serve the settings page"""
     return render_template('settings.html')
 
@@ -338,20 +386,260 @@ def delete_log(log_id):
 @app.route('/api/settings', methods=['GET', 'POST'])
 def handle_settings():
     """API endpoint to get or update settings"""
+    global settings
+    
     if request.method == 'GET':
-        # For now, return default settings
-        return jsonify({
-            'securityLevel': 'high',
-            'notificationEmail': '',
-            'notifySuccess': False,
-            'notifyFailure': True
-        })
+        return jsonify(settings)
     elif request.method == 'POST':
-        # Process settings update
-        settings = request.json
-        logger.info(f"Updated settings: {settings}")
-        # In a real app, we would save these settings somewhere
-        return jsonify({'status': 'success'})
+        try:
+            # Process settings update
+            updated_settings = request.json
+            if updated_settings is None:
+                logger.error("No JSON data received in settings update")
+                return jsonify({'status': 'error', 'message': 'No JSON data received'}), 400
+            
+            # Make a copy of current settings and update it
+            current_settings = settings.copy() if isinstance(settings, dict) else {}
+            current_settings.update(updated_settings)
+            settings = current_settings
+            save_settings(settings)
+            
+            # Save and update the custom pattern if it was changed
+            if 'customPattern' in updated_settings:
+                custom_pattern = updated_settings['customPattern']
+                pattern_saved = save_pattern_to_json(custom_pattern)
+                
+                # If Pico is connected, try to update the pattern on the device
+                pattern_updated = False
+                if pico_connected:
+                    try:
+                        pattern_updated = update_touch_lock_pattern(custom_pattern)
+                    except Exception as e:
+                        logger.error(f"Error updating pattern on device: {e}")
+                
+                # Return detailed status
+                return jsonify({
+                    'status': 'success',
+                    'pattern_saved': pattern_saved,
+                    'pattern_updated_on_device': pattern_updated if pico_connected else None,
+                    'pico_connected': pico_connected
+                })
+            
+            logger.info(f"Updated settings: {settings}")
+            return jsonify({'status': 'success'})
+        except Exception as e:
+            logger.error(f"Error handling settings: {e}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+
+def update_touch_lock_pattern(custom_pattern):
+    """Update the touch_lock.py file with the new custom pattern and restart it"""
+    global pico_connected
+    
+    # Save the pattern to a JSON file first
+    pattern_file_path = save_pattern_to_json(custom_pattern)
+    
+    if not pico_connected:
+        logger.error("Pico is not connected. Cannot update touch lock pattern.")
+        return False
+    
+    try:
+        # Get the path to the touch_lock.py file
+        touch_lock_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "touch_sensor",
+            "touch_lock.py"
+        )
+        
+        if not os.path.exists(touch_lock_path):
+            logger.error(f"Cannot find source file at {touch_lock_path}")
+            return False
+        
+        # Perform a complete reboot of the Pico - this is more reliable than soft reset
+        logger.info("Performing complete reboot of the Pico...")
+        
+        # First attempt a clean shutdown of any running processes
+        try:
+            subprocess.run(
+                ["mpremote", "exec", "import machine; machine.reset()"],
+                capture_output=True,
+                text=True,
+                timeout=2
+            )
+        except Exception as e:
+            logger.warning(f"Machine reset attempt: {e}")
+        
+        # Wait for a moment
+        time.sleep(2)
+        
+        # Now do a hard reset via the tool
+        logger.info("Hard resetting Pico...")
+        subprocess.run(
+            ["mpremote", "reset"],
+            capture_output=True,
+            text=True
+        )
+        
+        # Wait for Pico to reconnect with a longer timeout
+        logger.info("Waiting for Pico to reconnect after reset...")
+        reconnect_attempts = 0
+        max_attempts = 15  # Increased from 10
+        reconnected = False
+        
+        while reconnect_attempts < max_attempts and not reconnected:
+            time.sleep(2)  # Increased wait time between attempts
+            reconnect_attempts += 1
+            
+            logger.info(f"Reconnection attempt {reconnect_attempts}/{max_attempts}...")
+            
+            # Check if Pico is connected
+            result = subprocess.run(
+                ["mpremote", "connect", "list"], 
+                capture_output=True, 
+                text=True
+            )
+            
+            if "2e8a:0005" in result.stdout:
+                logger.info("Pico reconnected successfully")
+                reconnected = True
+                # Extra stabilization time
+                logger.info("Allowing Pico to fully stabilize...")
+                time.sleep(4)  # Longer stabilization time
+            else:
+                logger.warning("Pico not yet reconnected, waiting...")
+        
+        if not reconnected:
+            logger.error("Failed to reconnect to Pico after reset")
+            return False
+        
+        # Verify connection is still active
+        verify_result = subprocess.run(
+            ["mpremote", "connect", "list"], 
+            capture_output=True, 
+            text=True
+        )
+        
+        if "2e8a:0005" not in verify_result.stdout:
+            logger.error("Pico connection unstable after reconnection")
+            return False
+            
+        # Clear out any boot.py or main.py that might be auto-starting touch_lock
+        logger.info("Ensuring no auto-start scripts are present...")
+        try:
+            subprocess.run(["mpremote", "rm", ":boot.py"], capture_output=True, text=True)
+        except:
+            pass
+        try:
+            subprocess.run(["mpremote", "rm", ":main.py"], capture_output=True, text=True)
+        except:
+            pass
+        
+        # Clean copy of touch_lock.py to the Pico
+        logger.info("Copying fresh touch_lock.py to Pico...")
+        try:
+            # Delete existing file first
+            subprocess.run(["mpremote", "rm", ":touch_lock.py"], capture_output=True, text=True)
+            time.sleep(0.5)
+            
+            # Copy the file
+            copy_result = subprocess.run(
+                ["mpremote", "cp", touch_lock_path, ":touch_lock.py"],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            logger.info("Successfully copied touch_lock.py to Pico")
+        except Exception as e:
+            logger.error(f"Failed to copy touch_lock.py: {e}")
+            return False
+        
+        # Copy the custom pattern file
+        logger.info("Copying custom_pattern.json to Pico...")
+        try:
+            copy_result = subprocess.run(
+                ["mpremote", "cp", pattern_file_path, ":custom_pattern.json"],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            logger.info("Successfully copied custom_pattern.json to Pico")
+        except Exception as e:
+            logger.error(f"Failed to copy custom_pattern.json: {e}")
+            return False
+        
+        # Wait to ensure files are fully written
+        time.sleep(1)
+        
+        # Start touch_lock with a clean environment
+        logger.info("Starting touch_lock with new pattern...")
+        launcher_script = (
+            f'import gc\n'
+            f'gc.collect()\n'
+            f'import sys\n'
+            f'# Clear any modules that might be loaded\n'
+            f'for name in list(sys.modules):\n'
+            f'    if name != "sys" and name != "gc":\n'
+            f'        del sys.modules[name]\n'
+            f'import _thread\n'
+            f'def run_touch_lock():\n'
+            f'    # Import with fresh state\n'
+            f'    __import__("touch_lock")\n'
+            f'try:\n'
+            f'    _thread.start_new_thread(run_touch_lock, ())\n'
+            f'    print("Touch lock started with fresh state")\n'
+            f'except Exception as e:\n'
+            f'    print(f"Error starting touch_lock: {{e}}")\n'
+        )
+        
+        # Execute the launcher script
+        try:
+            result = subprocess.run(
+                ["mpremote", "exec", launcher_script], 
+                capture_output=True,
+                text=True,
+                timeout=3
+            )
+            if "Touch lock started with fresh state" in result.stdout:
+                logger.info("Successfully started touch_lock with new pattern")
+            else:
+                logger.warning(f"Unexpected output when starting touch_lock: {result.stdout}")
+        except Exception as e:
+            logger.error(f"Error executing launcher script: {e}")
+            return False
+        
+        return True
+    except Exception as e:
+        logger.error(f"Error updating touch_lock pattern: {e}")
+        return False
+
+def save_pattern_to_json(custom_pattern):
+    """Save the custom pattern to a JSON file"""
+    try:
+        # Path to save the pattern file
+        pattern_dir = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "touch_sensor"
+        )
+        pattern_file_path = os.path.join(pattern_dir, "custom_pattern.json")
+        
+        # Ensure the directory exists
+        os.makedirs(pattern_dir, exist_ok=True)
+        
+        # Format the pattern for saving - only include the user's custom pattern
+        pattern_data = {
+            "pattern": custom_pattern,
+            "created_at": datetime.now().isoformat()
+            # No default_pattern key
+        }
+        
+        # Write the pattern to the file (completely overwrite)
+        with open(pattern_file_path, 'w') as f:
+            json.dump(pattern_data, f, indent=4)
+        
+        logger.info(f"Custom pattern saved to {pattern_file_path}")
+        return pattern_file_path
+    except Exception as e:
+        logger.error(f"Error saving pattern to JSON: {e}")
+        return None
 
 @socketio.on('connect')
 def handle_connect():
