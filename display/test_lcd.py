@@ -2,9 +2,7 @@ import serial
 from displayhatmini import DisplayHATMini
 from PIL import Image, ImageDraw, ImageFont
 import time
-
-# Serial to Pico
-ser = serial.Serial("/dev/serial0", 9600, timeout=1)
+import os
 
 # Display setup
 width = DisplayHATMini.WIDTH
@@ -107,13 +105,21 @@ while True:
     elif current_screen == "lock":
         if display.read_button(display.BUTTON_A):
             system_locked = True
-            ser.write(b"lock\n")
+            try:
+                with serial.Serial("/dev/ttyACM0", 9600, timeout=1) as ser:
+                    ser.write(b"lock\n")
+            except Exception as e:
+                print("Error sending lock:", e)
             draw_lock_screen()
             time.sleep(0.2)
 
         elif display.read_button(display.BUTTON_B):
             system_locked = False
-            ser.write(b"unlock\n")
+            try:
+                with serial.Serial("/dev/ttyACM0", 9600, timeout=1) as ser:
+                    ser.write(b"unlock\n")
+            except Exception as e:
+                print("Error sending unlock:", e)
             draw_lock_screen()
             time.sleep(0.2)
 
