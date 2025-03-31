@@ -19,6 +19,7 @@ import glob
 import threading
 import logging
 import subprocess
+import pickle
 from datetime import datetime
 from flask import Flask, render_template, jsonify, request, send_from_directory
 from flask_socketio import SocketIO, emit
@@ -430,6 +431,43 @@ def handle_settings():
         except Exception as e:
             logger.error(f"Error handling settings: {e}")
             return jsonify({'status': 'error', 'message': str(e)}), 500
+        
+
+# Route to handle image uploads
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'picture' not in request.files:
+        return jsonify({'status': 'error', 'message': 'No file part'}), 400
+    file = request.files['picture']
+    if file.filename == '':
+        return jsonify({'status': 'error', 'message': 'No selected file'}), 400
+    if file:
+        # Save the uploaded image
+        upload_folder = os.path.join('web_UI','static', 'images')
+        os.makedirs(upload_folder, exist_ok=True)  # Ensure the upload folder exists
+        image_path = os.path.join(upload_folder, file.filename)
+        print(image_path)
+        file.save(image_path)
+
+        # Save the file path to a pickle file
+        pickle_file = os.path.join(upload_folder, 'uploaded_images.pkl')
+        try:
+            if os.path.exists(pickle_file):
+                with open(pickle_file, 'rb') as f:
+                    uploaded_images = pickle.load(f)
+            else:
+                uploaded_images = []
+
+            uploaded_images.append(image_path)
+
+            with open(pickle_file, 'wb') as f:
+                pickle.dump(uploaded_images, f)
+
+            return jsonify({'status': 'success'})
+            # return jsonify({'status': 'success', 'message': 'File uploaded successfully', 'path': image_path}), 200
+        except Exception as e:
+            logger.error(f"Error saving to pickle file: {e}")
+            return jsonify({'status': 'error', 'message': 'Failed to save file path'}), 500
 
 def update_touch_lock_pattern(custom_pattern):
     """Update the touch_lock.py file with the new custom pattern and restart it"""
