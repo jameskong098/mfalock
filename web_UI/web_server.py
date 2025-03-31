@@ -468,6 +468,12 @@ def upload_file():
         except Exception as e:
             logger.error(f"Error saving to pickle file: {e}")
             return jsonify({'status': 'error', 'message': 'Failed to save file path'}), 500
+        
+# Function to transfer a file to the Pico via mpremote
+# def transfer_file_to_pi(local_path, remote_path, pi_ip, username, apssword):
+#     try: 
+#         ssh = paramiko.SSHClient()  
+
 
 def update_touch_lock_pattern(custom_pattern):
     """Update the touch_lock.py file with the new custom pattern and restart it"""
