@@ -443,7 +443,7 @@ def upload_file():
         return jsonify({'status': 'error', 'message': 'No selected file'}), 400
     if file:
         # Save the uploaded image
-        upload_folder = os.path.join('web_UI','static', 'images')
+        upload_folder = os.path.join('camera', 'faces')
         os.makedirs(upload_folder, exist_ok=True)  # Ensure the upload folder exists
         image_path = os.path.join(upload_folder, file.filename)
         print(image_path)
