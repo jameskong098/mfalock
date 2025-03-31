@@ -490,7 +490,7 @@ def update_touch_lock_pattern(custom_pattern):
         # Get the path to the touch_lock.py file
         touch_lock_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "touch_sensor",
+            "touch",
             "touch_lock.py"
         )
         
