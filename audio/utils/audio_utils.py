@@ -1,6 +1,8 @@
 from vosk import Model, KaldiRecognizer
 import pyaudio
 import json
+import random_utils
+from audio.utils.random_utils import gen_phrase
 
 # Load the Vosk Model (Ensure "vosk_model" folder is in the same directory)
 model = Model("vosk_model")
@@ -23,6 +25,7 @@ stream = audio.open(format=pyaudio.paInt16, channels=1, rate=16000,
 stream.start_stream()
 
 print("Listening... Speak now!")
+phrase = gen_phrase()
 
 try:
     while True:
@@ -32,6 +35,9 @@ try:
             text = result.get("text", "")  # Extract recognized text
             if text:
                 print(f"You said: {text}")
+                if text == phrase:
+
+                    print("Correct... Opening!!!")
 except KeyboardInterrupt:
     print(" Stopping...")
     stream.stop_stream()
