@@ -20,5 +20,8 @@ def add_word(word: str) -> bool:
     words.append(word)
     return True
 
-def add_words(words: str) -> bool:
-
+def add_words(wordss: str) -> None:
+    added_words = []
+    for word in wordss.split(","):
+        if add_word(word):
+            added_words.append(word)
