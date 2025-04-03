@@ -113,7 +113,8 @@ def check_and_copy_touch_lock():
         
         # Get the path to touch_lock.py in the touch directory
         touch_lock_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
+            "pico_sensors",
             "touch",
             "touch_lock.py"
         )
