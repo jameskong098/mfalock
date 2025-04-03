@@ -111,10 +111,10 @@ def check_and_copy_touch_lock():
         # Always copy the latest version of touch_lock.py to the Pico
         logger.info("Copying touch_lock.py to Pico...")
         
-        # Get the path to touch_lock.py in the touch_sensor directory
+        # Get the path to touch_lock.py in the touch directory
         touch_lock_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "touch_sensor",
+            "touch",
             "touch_lock.py"
         )
         
@@ -275,7 +275,7 @@ def pico_connection_thread():
                     # Check if a custom pattern file exists and copy it to the Pico
                     pattern_file_path = os.path.join(
                         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                        "touch_sensor",
+                        "touch",
                         "custom_pattern.json"
                     )
                     
@@ -661,7 +661,7 @@ def save_pattern_to_json(custom_pattern):
         # Path to save the pattern file
         pattern_dir = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "touch_sensor"
+            "touch"
         )
         pattern_file_path = os.path.join(pattern_dir, "custom_pattern.json")
         
