@@ -32,14 +32,66 @@ document.addEventListener('DOMContentLoaded', function() {
             // Update the dashboard counters
             successCountElement.textContent = successCount;
             failCountElement.textContent = failCount;
+            
+            // Populate the live events list with the 10 most recent events
+            const recentEvents = [...data]
+                .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+                .slice(0, 10);
+                
+            // Clear any existing events
+            const eventsContainer = document.getElementById('live-events');
+            eventsContainer.innerHTML = '';
+            
+            // Add each event to the list (newest first)
+            recentEvents.forEach(event => {
+                // Create message property if missing in log data
+                if (!event.message) {
+                    event.message = event.status === 'success' 
+                        ? 'Access granted: Pattern recognized correctly' 
+                        : 'Access denied: Incorrect pattern';
+                }
+                addEventToList(event);
+            });
         })
         .catch(error => {
             console.error('Error fetching logs:', error);
         });
 
+    // Fetch initial sensor mode from server
+    fetch('/api/sensor_mode')
+        .then(response => response.json())
+        .then(data => {
+            updateSensorModeUI(data.mode);
+        })
+        .catch(error => console.error('Error fetching sensor mode:', error));
+    
+    // Set up socket event listeners
+    if (typeof socket !== 'undefined') {
+        // Listen for sensor mode change events
+        socket.on('sensor_mode_change', function(data) {
+            updateSensorModeUI(data.mode);
+        });
+        
+        // Listen for rotary angle updates
+        socket.on('rotary_update', function(data) {
+            const rotaryDisplay = document.getElementById('rotary-angle-display');
+            if (rotaryDisplay) {
+                rotaryDisplay.textContent = `${data.angle}°`;
+                
+                // Animate a dial or other visual
+                const rotaryDial = document.getElementById('rotary-dial');
+                if (rotaryDial) {
+                    rotaryDial.style.transform = `rotate(${data.angle}deg)`;
+                }
+            }
+        });
+    }
+
     // Listen for real-time auth events
     if (typeof socket !== 'undefined') {
+        console.log('Setting up auth_event listener');
         socket.on('auth_event', function(data) {
+            console.log('Received auth event:', data);
             const eventDate = new Date(data.timestamp).toISOString().split('T')[0];
             const today = new Date().toISOString().split('T')[0];
 
@@ -52,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
 
-            // Add event to the live events list
+            // Add event to the live events list (sorting happens inside this function)
             addEventToList(data);
         });
     }
@@ -142,18 +194,65 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
+
+    // Fetch initial sensor mode from server
+    fetch('/api/sensor_mode')
+        .then(response => response.json())
+        .then(data => {
+            updateSensorModeUI(data.mode);
+        })
+        .catch(error => console.error('Error fetching sensor mode:', error));
+    
+    // Set up socket event listeners
+    if (typeof socket !== 'undefined') {
+        // Listen for sensor mode change events
+        socket.on('sensor_mode_change', function(data) {
+            updateSensorModeUI(data.mode);
+        });
+        
+        // Listen for rotary angle updates
+        socket.on('rotary_update', function(data) {
+            const rotaryDisplay = document.getElementById('rotary-angle-display');
+            if (rotaryDisplay) {
+                rotaryDisplay.textContent = `${data.angle}°`;
+                
+                // Optional: animate a dial or other visual
+                const rotaryDial = document.getElementById('rotary-dial');
+                if (rotaryDial) {
+                    rotaryDial.style.transform = `rotate(${data.angle}deg)`;
+                }
+            }
+        });
+    }
 });
 
 // Modified function to add events to the live events list
 function addEventToList(event) {
+    console.log('Adding event:', event);
     const eventsContainer = document.getElementById('live-events');
     
     // Create the new event element
     const newEvent = document.createElement('li');
     newEvent.classList.add(event.status);
     
-    // Format the time
-    const timestamp = new Date(event.timestamp);
+    // Ensure timestamp is properly formatted
+    let timestamp;
+    try {
+        timestamp = new Date(event.timestamp);
+        if (isNaN(timestamp.getTime())) {
+            // If timestamp is invalid, use current time
+            console.warn('Invalid timestamp in event, using current time instead');
+            timestamp = new Date();
+        }
+    } catch (e) {
+        console.warn('Error parsing timestamp, using current time instead');
+        timestamp = new Date();
+    }
+    
+    // Store the timestamp as numeric value for sorting
+    newEvent.dataset.timestamp = timestamp.getTime();
+    
+    // Format the time for display
     const formattedTime = timestamp.toLocaleTimeString('en-US', { 
         hour: '2-digit', 
         minute: '2-digit',
@@ -166,17 +265,66 @@ function addEventToList(event) {
         <div class="event-message">${event.message}</div>
     `;
     
-    // Add to the beginning of the list (newest on top)
-    eventsContainer.insertBefore(newEvent, eventsContainer.firstChild);
+    // Add the event to the list
+    eventsContainer.appendChild(newEvent);
     
-    // Add fade-in effect
-    setTimeout(() => {
-        newEvent.classList.add('visible');
-    }, 10);
+    // Get all events and convert timestamps to numbers for reliable sorting
+    const allEvents = Array.from(eventsContainer.children).map(el => {
+        // Ensure timestamp is a number
+        if (!el.dataset.timestamp) {
+            el.dataset.timestamp = Date.now();
+        }
+        return el;
+    });
     
-    // Limit the number of displayed events (keep the list manageable)
+    // Sort by timestamp (newest first)
+    allEvents.sort((a, b) => {
+        return Number(b.dataset.timestamp) - Number(a.dataset.timestamp);
+    });
+    
+    // Clear and rebuild the list in sorted order
+    eventsContainer.innerHTML = '';
+    allEvents.forEach(event => {
+        eventsContainer.appendChild(event);
+        // Re-add the visible class for animation
+        setTimeout(() => {
+            event.classList.add('visible');
+        }, 10);
+    });
+    
+    // Limit the number of displayed events
     const maxEvents = 50;
     while (eventsContainer.children.length > maxEvents) {
         eventsContainer.removeChild(eventsContainer.lastChild);
+    }
+}
+
+// Function to update UI based on the current sensor mode
+function updateSensorModeUI(mode) {
+    console.log('Sensor mode changed to:', mode);
+    
+    // Update authentication method buttons/displays
+    const touchMethodElem = document.getElementById('touch-method');
+    const rotaryMethodElem = document.getElementById('rotary-method');
+    
+    if (touchMethodElem && rotaryMethodElem) {
+        if (mode === 'touch') {
+            touchMethodElem.classList.add('active');
+            rotaryMethodElem.classList.remove('active');
+            document.querySelectorAll('.touch-instructions').forEach(el => el.style.display = 'block');
+            document.querySelectorAll('.rotary-instructions').forEach(el => el.style.display = 'none');
+        } else if (mode === 'rotary') {
+            touchMethodElem.classList.remove('active');
+            rotaryMethodElem.classList.add('active');
+            document.querySelectorAll('.touch-instructions').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.rotary-instructions').forEach(el => el.style.display = 'block');
+        }
+    }
+    
+    // Update any other UI elements that should change based on sensor mode
+    const sensorModeIndicator = document.getElementById('current-sensor-mode');
+    if (sensorModeIndicator) {
+        sensorModeIndicator.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
+        sensorModeIndicator.className = `mode-indicator ${mode}-mode`;
     }
 }

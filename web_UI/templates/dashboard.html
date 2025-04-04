@@ -44,6 +44,33 @@
             </div>
         </div>
     </div>
+
+    <!-- Add to your dashboard.html or other templates where needed -->
+    <div class="sensor-mode-indicator">
+        Current Mode: <span id="current-sensor-mode">Idle</span>
+    </div>
+
+    <div class="auth-methods">
+        <div class="auth-method-button" id="touch-method">
+            <i class="fas fa-hand-pointer"></i> Touch Pattern
+        </div>
+        <div class="auth-method-button" id="rotary-method">
+            <i class="fas fa-sync-alt"></i> Rotary Input
+        </div>
+    </div>
+
+    <div class="touch-instructions">
+        <!-- Your existing touch pattern instructions -->
+    </div>
+
+    <div class="rotary-instructions" style="display: none;">
+        <h3>Rotary Authentication</h3>
+        <p>Turn the dial to your secret position to unlock.</p>
+        <div class="rotary-display">
+            <div id="rotary-dial"></div>
+            <div id="rotary-angle-display">0°</div>
+        </div>
+    </div>
 </section>
 {% endblock %}
 
