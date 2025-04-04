@@ -717,6 +717,9 @@ def save_pattern_to_json(custom_pattern):
         logger.error(f"Error saving pattern to JSON: {e}")
         return None
 
+def update_audio():
+    return None
+
 @socketio.on('connect')
 def handle_connect():
     """Handle WebSocket connection"""
