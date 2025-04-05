@@ -240,7 +240,8 @@ def monitor_pico():
                         'user': 'User',
                         'location': 'Main Entrance',
                         'status': 'success',
-                        'details': 'Pattern recognized correctly',
+                        'message': 'Access granted: Pattern recognized correctly',
+                        'details': f'Pattern recognized',
                         'method': 'Touch Pattern' if current_sensor_mode == 'touch' else 'Rotary Input' if current_sensor_mode == 'rotary' else 'Unknown'
                     }
                     auth_log_entries.append(log_entry)
@@ -255,6 +256,7 @@ def monitor_pico():
                         'user': 'Unknown',
                         'location': 'Main Entrance',
                         'status': 'failure',
+                        'message': 'Access denied: Incorrect pattern',
                         'details': f'Incorrect pattern: {line}',
                         'method': 'Touch Pattern' if current_sensor_mode == 'touch' else 'Rotary Input' if current_sensor_mode == 'rotary' else 'Unknown'
                     }
@@ -734,7 +736,6 @@ def handle_connect():
 def page_not_found(e):
     return render_template('404.html'), 404
 
-# Add this route after your existing API routes
 @app.route('/api/sensor_mode')
 def get_sensor_mode():
     """API endpoint to get the current sensor mode"""

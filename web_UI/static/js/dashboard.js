@@ -42,16 +42,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const eventsContainer = document.getElementById('live-events');
             eventsContainer.innerHTML = '';
             
-            // Add each event to the list (newest first)
-            recentEvents.forEach(event => {
-                // Create message property if missing in log data
-                if (!event.message) {
-                    event.message = event.status === 'success' 
-                        ? 'Access granted: Pattern recognized correctly' 
-                        : 'Access denied: Incorrect pattern';
-                }
-                addEventToList(event);
-            });
+            // Loop through events in reverse order so the newest appears at the top when using prepend
+            // This preserves the same order as the real-time events
+            for (let i = recentEvents.length - 1; i >= 0; i--) {
+                addEventToList(recentEvents[i]);
+            }
         })
         .catch(error => {
             console.error('Error fetching logs:', error);
@@ -88,12 +83,20 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Listen for real-time auth events
-    if (typeof socket !== 'undefined') {
-        console.log('Setting up auth_event listener');
+    if (typeof socket !== 'undefined') {      
+        // Add tracking for last event to prevent duplicates
+        let lastEventTime = null;
+        let lastEventStatus = null;
+        const DUPLICATE_THRESHOLD_MS = 2000; // 2 seconds
+        
         socket.on('auth_event', function(data) {
-            console.log('Received auth event:', data);
             const eventDate = new Date(data.timestamp).toISOString().split('T')[0];
             const today = new Date().toISOString().split('T')[0];
+            const currentTime = new Date().getTime();
+            
+            // Update tracking variables
+            lastEventTime = currentTime;
+            lastEventStatus = data.status;
 
             // Update counters only if the event is for the current day
             if (eventDate === today) {
@@ -104,7 +107,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
 
-            // Add event to the live events list (sorting happens inside this function)
+            // Add event to the live events list
             addEventToList(data);
         });
     }
@@ -228,19 +231,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Modified function to add events to the live events list
 function addEventToList(event) {
-    console.log('Adding event:', event);
     const eventsContainer = document.getElementById('live-events');
-    
+
     // Create the new event element
     const newEvent = document.createElement('li');
     newEvent.classList.add(event.status);
-    
+
     // Ensure timestamp is properly formatted
     let timestamp;
     try {
         timestamp = new Date(event.timestamp);
         if (isNaN(timestamp.getTime())) {
-            // If timestamp is invalid, use current time
             console.warn('Invalid timestamp in event, using current time instead');
             timestamp = new Date();
         }
@@ -248,50 +249,29 @@ function addEventToList(event) {
         console.warn('Error parsing timestamp, using current time instead');
         timestamp = new Date();
     }
-    
-    // Store the timestamp as numeric value for sorting
-    newEvent.dataset.timestamp = timestamp.getTime();
-    
+
     // Format the time for display
-    const formattedTime = timestamp.toLocaleTimeString('en-US', { 
+    const formattedTime = `${timestamp.toLocaleDateString('en-US')} ${timestamp.toLocaleTimeString('en-US', { 
         hour: '2-digit', 
         minute: '2-digit',
         second: '2-digit'
-    });
-    
+    })}`;
+
+    // Create a visual status indicator
+    const statusBadge = `<div class="event-status-badge ${event.status}">${event.status}</div>`;
+
     // Set the content
     newEvent.innerHTML = `
-        <div class="event-time">${formattedTime}</div>
-        <div class="event-message">${event.message}</div>
+    <div class="event-time">${formattedTime}</div>
+    <div class="event-content">
+        <div class="event-message">${event.message || 'Authentication attempt'}</div>
+        ${statusBadge}
+    </div>
     `;
-    
-    // Add the event to the list
-    eventsContainer.appendChild(newEvent);
-    
-    // Get all events and convert timestamps to numbers for reliable sorting
-    const allEvents = Array.from(eventsContainer.children).map(el => {
-        // Ensure timestamp is a number
-        if (!el.dataset.timestamp) {
-            el.dataset.timestamp = Date.now();
-        }
-        return el;
-    });
-    
-    // Sort by timestamp (newest first)
-    allEvents.sort((a, b) => {
-        return Number(b.dataset.timestamp) - Number(a.dataset.timestamp);
-    });
-    
-    // Clear and rebuild the list in sorted order
-    eventsContainer.innerHTML = '';
-    allEvents.forEach(event => {
-        eventsContainer.appendChild(event);
-        // Re-add the visible class for animation
-        setTimeout(() => {
-            event.classList.add('visible');
-        }, 10);
-    });
-    
+
+    // Add the new event to the top of the container
+    eventsContainer.prepend(newEvent);
+
     // Limit the number of displayed events
     const maxEvents = 50;
     while (eventsContainer.children.length > maxEvents) {
@@ -301,8 +281,6 @@ function addEventToList(event) {
 
 // Function to update UI based on the current sensor mode
 function updateSensorModeUI(mode) {
-    console.log('Sensor mode changed to:', mode);
-    
     // Update authentication method buttons/displays
     const touchMethodElem = document.getElementById('touch-method');
     const rotaryMethodElem = document.getElementById('rotary-method');

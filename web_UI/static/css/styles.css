@@ -654,7 +654,7 @@ tr:hover {
     padding: 10px;
     margin: 0;
     display: flex;
-    flex-direction: column-reverse; 
+    flex-direction: column;
 }
 
 .live-events-list li {
@@ -696,4 +696,60 @@ tr:hover {
 
 .events-container::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.5);
+}
+
+/* Event status indicators */
+.live-events-list li {
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    transition: background-color 0.2s ease;
+    position: relative;
+}
+
+.live-events-list li.success {
+    background-color: rgba(39, 174, 96, 0.1);
+    border-left: 4px solid #27ae60;
+}
+
+.live-events-list li.failure {
+    background-color: rgba(231, 76, 60, 0.1);
+    border-left: 4px solid #e74c3c;
+}
+
+.event-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 5px;
+}
+
+.event-status-badge {
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.event-status-badge.success {
+    background-color: #27ae60;
+    color: white;
+}
+
+.event-status-badge.failure {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.event-time {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.event-message {
+    flex-grow: 1;
+    padding-right: 10px;
 }
