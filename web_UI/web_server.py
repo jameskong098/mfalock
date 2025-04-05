@@ -46,6 +46,28 @@ current_sensor_mode = "idle"
 LOG_FILE_PATH = "auth_logs.json" 
 SETTINGS_FILE_PATH = "settings.json"
 
+# Add WebSocket route to handle manual auth events from the browser
+@socketio.on('auth_event')
+def handle_auth_event(data):
+    """Handle authentication events sent from the browser"""
+    global auth_log_entries
+    
+    # Ensure the data has a timestamp
+    if 'timestamp' not in data:
+        data['timestamp'] = datetime.now().isoformat()
+    
+    # Ensure the data has an ID
+    if 'id' not in data:
+        data['id'] = str(uuid.uuid4())
+    
+    # Add the event to our logs
+    auth_log_entries.append(data)
+    save_logs(auth_log_entries)
+    
+    # Broadcast the event to all clients
+    socketio.emit('auth_event', data)
+    logger.info(f"Auth event received from client: {data['status']} - {data['message']}")
+
 def load_logs():
     """Load logs from the log file."""
     if os.path.exists(LOG_FILE_PATH):
@@ -240,8 +262,8 @@ def monitor_pico():
                         'user': 'User',
                         'location': 'Main Entrance',
                         'status': 'success',
-                        'message': 'Access granted: Pattern recognized correctly',
-                        'details': f'Pattern recognized',
+                        'message': 'Access granted: Touch pattern recognized correctly',
+                        'details': f'Touch pattern recognized',
                         'method': 'Touch Pattern' if current_sensor_mode == 'touch' else 'Rotary Input' if current_sensor_mode == 'rotary' else 'Unknown'
                     }
                     auth_log_entries.append(log_entry)
@@ -256,8 +278,8 @@ def monitor_pico():
                         'user': 'Unknown',
                         'location': 'Main Entrance',
                         'status': 'failure',
-                        'message': 'Access denied: Incorrect pattern',
-                        'details': f'Incorrect pattern: {line}',
+                        'message': 'Access denied: Incorrect touch pattern',
+                        'details': f'Incorrect touch pattern: {line}',
                         'method': 'Touch Pattern' if current_sensor_mode == 'touch' else 'Rotary Input' if current_sensor_mode == 'rotary' else 'Unknown'
                     }
                     auth_log_entries.append(log_entry)

@@ -65,11 +65,34 @@
 
     <div class="rotary-instructions" style="display: none;">
         <h3>Rotary Authentication</h3>
-        <p>Turn the dial to your secret position to unlock.</p>
-        <div class="rotary-display">
-            <div id="rotary-dial"></div>
-            <div id="rotary-angle-display">0°</div>
+        <p>Turn the dial to point to the correct sequence of colors.</p>
+        <p class="instruction-step">Wait 3 seconds on each color to select it. Keep in mind that turning the rotary knob has a bit of lag!</p>
+        
+        <div class="rotary-lock-container">
+            <div class="circular-lock">
+                <div class="quadrant" data-color="red" style="background-color: #FF6B6B;"></div>
+                <div class="quadrant" data-color="blue" style="background-color: #4ECDC4;"></div>
+                <div class="quadrant" data-color="green" style="background-color: #59CD90;"></div>
+                <div class="quadrant" data-color="yellow" style="background-color: #EAC435;"></div>
+                <div class="quadrant" data-color="purple" style="background-color: #9370DB;"></div>
+                <div class="quadrant" data-color="orange" style="background-color: #FF9F1C;"></div>
+                <div class="center-circle">
+                    <div class="pointer"></div>
+                </div>
+            </div>
+            <div class="selected-colors-container">
+                <p>Selected Colors:</p>
+                <div id="selected-colors" class="selected-colors">
+                    <div class="color-placeholder"></div>
+                    <div class="color-placeholder"></div>
+                    <div class="color-placeholder"></div>
+                    <div class="color-placeholder"></div>
+                </div>
+            </div>
         </div>
+        
+        <div id="rotary-angle-display">0°</div>
+        <div id="rotary-status" class="status-message"></div>
     </div>
 </section>
 {% endblock %}

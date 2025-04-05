@@ -72,12 +72,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const rotaryDisplay = document.getElementById('rotary-angle-display');
             if (rotaryDisplay) {
                 rotaryDisplay.textContent = `${data.angle}°`;
-                
-                // Animate a dial or other visual
-                const rotaryDial = document.getElementById('rotary-dial');
-                if (rotaryDial) {
-                    rotaryDial.style.transform = `rotate(${data.angle}deg)`;
-                }
+                updateRotaryPosition(data.angle);
             }
         });
     }
@@ -219,14 +214,16 @@ document.addEventListener('DOMContentLoaded', function() {
             if (rotaryDisplay) {
                 rotaryDisplay.textContent = `${data.angle}°`;
                 
-                // Optional: animate a dial or other visual
-                const rotaryDial = document.getElementById('rotary-dial');
-                if (rotaryDial) {
-                    rotaryDial.style.transform = `rotate(${data.angle}deg)`;
+                // Ensure we pass the angle to our rotary lock system
+                if (typeof updateRotaryPosition === 'function') {
+                    updateRotaryPosition(data.angle);
                 }
             }
         });
     }
+
+    // Initialize rotary lock system
+    initRotaryLock();
 });
 
 // Modified function to add events to the live events list
@@ -304,5 +301,267 @@ function updateSensorModeUI(mode) {
     if (sensorModeIndicator) {
         sensorModeIndicator.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
         sensorModeIndicator.className = `mode-indicator ${mode}-mode`;
+    }
+}
+
+// Rotary Lock System
+function initRotaryLock() {
+    // Default color sequence password (can be changed in settings)
+    let colorSequencePassword = localStorage.getItem('colorSequencePassword') || 
+        JSON.stringify(['red', 'blue', 'green', 'yellow']);
+    
+    // Parse the stored password
+    try {
+        colorSequencePassword = JSON.parse(colorSequencePassword);
+    } catch(e) {
+        colorSequencePassword = ['red', 'blue', 'green', 'yellow'];
+    }
+    
+    // State variables
+    let currentPosition = 0; // 0-359 degrees
+    let selectedQuadrant = null;
+    let selectedColors = [];
+    let selectionTimer = null;
+    const SELECTION_DELAY = 3000; // 2 seconds to confirm selection
+    const COLOR_POSITIONS = {
+        'red': 0,       // Top
+        'blue': 60,     // Top right
+        'green': 120,   // Bottom right
+        'purple': 180,  // Bottom
+        'orange': 240,  // Bottom left
+        'yellow': 300   // Top left
+    };
+    
+    // Get quadrants
+    const quadrants = document.querySelectorAll('.quadrant');
+    const pointer = document.querySelector('.pointer');
+    const colorPlaceholders = document.querySelectorAll('.color-placeholder');
+    const rotaryStatus = document.getElementById('rotary-status');
+    
+    // Remove manual testing with mouse - only use rotary sensor input
+    // Initialize the rotary position
+    updateRotaryPosition(0);
+    
+    // Make updateRotaryPosition accessible globally for socket events
+    window.updateRotaryPosition = function(angle) {
+        // Update the pointer position
+        if(pointer) {
+            pointer.style.transform = `rotate(${angle}deg)`;
+            currentPosition = angle;
+        }
+        
+        // Determine which quadrant is selected
+        const newSelectedQuadrant = getSelectedQuadrant(angle);
+        
+        // If quadrant changed, reset timer
+        if(newSelectedQuadrant !== selectedQuadrant) {
+            if(selectionTimer) {
+                clearTimeout(selectionTimer);
+                selectionTimer = null;
+            }
+            
+            // Reset all quadrant highlight styles
+            quadrants.forEach(q => q.classList.remove('selected'));
+            
+            // Highlight the new selected quadrant
+            if(newSelectedQuadrant !== null) {
+                quadrants[getQuadrantIndex(newSelectedQuadrant)].classList.add('selected');
+                selectedQuadrant = newSelectedQuadrant;
+                
+                // Start timer for selection
+                selectionTimer = setTimeout(() => {
+                    selectCurrentQuadrant();
+                }, SELECTION_DELAY);
+            }
+        }
+    };
+    
+    // Function to update the rotary position and handle quadrant selection
+    function updateRotaryPosition(angle) {
+        // Update the pointer position
+        if(pointer) {
+            pointer.style.transform = `rotate(${angle}deg)`;
+            currentPosition = angle;
+        }
+        
+        // Determine which quadrant is selected
+        const newSelectedQuadrant = getSelectedQuadrant(angle);
+        
+        // If quadrant changed, reset timer
+        if(newSelectedQuadrant !== selectedQuadrant) {
+            if(selectionTimer) {
+                clearTimeout(selectionTimer);
+                selectionTimer = null;
+            }
+            
+            // Reset all quadrant highlight styles
+            quadrants.forEach(q => q.classList.remove('selected'));
+            
+            // Highlight the new selected quadrant
+            if(newSelectedQuadrant !== null) {
+                quadrants[getQuadrantIndex(newSelectedQuadrant)].classList.add('selected');
+                selectedQuadrant = newSelectedQuadrant;
+                
+                // Start timer for selection
+                selectionTimer = setTimeout(() => {
+                    selectCurrentQuadrant();
+                }, SELECTION_DELAY);
+            }
+        }
+    }
+    
+    // Function to get the quadrant index based on color name
+    function getQuadrantIndex(colorName) {
+        const colorArray = ['red', 'blue', 'green', 'yellow', 'purple', 'orange'];
+        return colorArray.indexOf(colorName);
+    }
+    
+    // Function to determine which quadrant is selected based on angle
+    function getSelectedQuadrant(angle) {
+        // Normalize angle to 0-360 range
+        const normalizedAngle = (angle % 360 + 360) % 360;
+        
+        // Map angle to color quadrants
+        if(normalizedAngle >= 330 || normalizedAngle < 30) return 'red';
+        if(normalizedAngle >= 30 && normalizedAngle < 90) return 'blue';
+        if(normalizedAngle >= 90 && normalizedAngle < 150) return 'green';
+        if(normalizedAngle >= 150 && normalizedAngle < 210) return 'yellow';
+        if(normalizedAngle >= 210 && normalizedAngle < 270) return 'purple';
+        if(normalizedAngle >= 270 && normalizedAngle < 330) return 'orange';
+        
+        return null;
+    }
+    
+    // Function to select the current quadrant and add its color to the sequence
+    function selectCurrentQuadrant() {
+        if(!selectedQuadrant) return;
+        
+        // Add color to selected sequence
+        if(selectedColors.length < colorPlaceholders.length) {
+            const colorIndex = selectedColors.length;
+            selectedColors.push(selectedQuadrant);
+            
+            // Update the UI
+            if(colorPlaceholders[colorIndex]) {
+                colorPlaceholders[colorIndex].style.backgroundColor = getComputedStyle(
+                    quadrants[getQuadrantIndex(selectedQuadrant)]
+                ).backgroundColor;
+                colorPlaceholders[colorIndex].classList.add('filled');
+            }
+            
+            // Show animation
+            quadrants[getQuadrantIndex(selectedQuadrant)].classList.remove('selected');
+            setTimeout(() => {
+                quadrants[getQuadrantIndex(selectedQuadrant)].classList.add('selected');
+            }, 50);
+            
+            // Play a sound or give feedback 
+            // (this would depend on your available sound API)
+            
+            // Check if sequence is complete
+            if(selectedColors.length === colorPlaceholders.length) {
+                setTimeout(() => {
+                    checkColorSequence();
+                }, 500);
+            }
+        }
+        
+        // Reset selection timer
+        if(selectionTimer) {
+            clearTimeout(selectionTimer);
+            selectionTimer = null;
+        }
+    }
+    
+    // Function to check if the entered color sequence is correct
+    function checkColorSequence() {
+        let isCorrect = true;
+        
+        // Compare each color in the sequence
+        for(let i = 0; i < colorSequencePassword.length; i++) {
+            if(i >= selectedColors.length || colorSequencePassword[i] !== selectedColors[i]) {
+                isCorrect = false;
+                break;
+            }
+        }
+        
+        // Handle authentication result
+        if(isCorrect) {
+            // Success!
+            rotaryStatus.textContent = "Authentication successful!";
+            rotaryStatus.className = "status-message success";
+            
+            // Add to event log with Socket.IO
+            if(typeof socket !== 'undefined') {
+                socket.emit('auth_event', {
+                    timestamp: new Date().toISOString(),
+                    status: 'success',
+                    message: 'Access granted: Rotary color sequence correct',
+                    method: 'Rotary Lock',
+                    user: 'User',
+                    location: 'Main Entrance',
+                    details: `Correct color sequence entered: ${selectedColors.join(', ')}`
+                });
+                
+                // Increment authentication counter
+                const successCountElement = document.getElementById('successful-auth-count');
+                if(successCountElement) {
+                    const currentCount = parseInt(successCountElement.textContent);
+                    successCountElement.textContent = currentCount + 1;
+                }
+            }
+            
+            // Animate success
+            quadrants.forEach(q => q.classList.remove('selected', 'correct', 'wrong'));
+            colorPlaceholders.forEach(p => p.classList.add('correct'));
+            
+            setTimeout(() => resetColorSequence(), 2000);
+        } else {
+            // Failed!
+            rotaryStatus.textContent = "Incorrect sequence, try again";
+            rotaryStatus.className = "status-message error";
+            
+            // Add to event log with Socket.IO
+            if(typeof socket !== 'undefined') {
+                socket.emit('auth_event', {
+                    timestamp: new Date().toISOString(),
+                    status: 'failure',
+                    message: 'Access denied: Incorrect rotary color sequence',
+                    method: 'Rotary Lock',
+                    user: 'Unknown',
+                    location: 'Main Entrance',
+                    details: `Incorrect color sequence: ${selectedColors.join(', ')}`
+                });
+                
+                // Increment failure counter
+                const failCountElement = document.getElementById('failed-auth-count');
+                if(failCountElement) {
+                    const currentCount = parseInt(failCountElement.textContent);
+                    failCountElement.textContent = currentCount + 1;
+                }
+            }
+            
+            // Animate failure
+            quadrants.forEach(q => q.classList.remove('selected', 'correct', 'wrong'));
+            colorPlaceholders.forEach(p => p.classList.add('wrong'));
+            
+            setTimeout(() => resetColorSequence(), 2000);
+        }
+    }
+    
+    // Function to reset the color sequence for a new attempt
+    function resetColorSequence() {
+        selectedColors = [];
+        
+        // Reset UI
+        colorPlaceholders.forEach(p => {
+            p.style.backgroundColor = '';
+            p.classList.remove('filled', 'correct', 'wrong');
+        });
+        
+        quadrants.forEach(q => q.classList.remove('selected', 'correct', 'wrong'));
+        
+        rotaryStatus.textContent = "";
+        rotaryStatus.className = "status-message";
     }
 }

@@ -753,3 +753,266 @@ tr:hover {
     flex-grow: 1;
     padding-right: 10px;
 }
+
+/* Rotary Lock Styles */
+.rotary-lock-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 30px 0;
+}
+
+.circular-lock {
+    position: relative;
+    width: 250px;
+    height: 250px;
+    border-radius: 50%;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    margin-bottom: 20px;
+}
+
+.quadrant {
+    position: absolute;
+    width: 50%;
+    height: 50%;
+}
+
+/* Position the 6 quadrants in a circle */
+.quadrant:nth-child(1) {
+    top: 0;
+    left: 25%;
+    width: 50%;
+    height: 50%;
+    border-radius: 125px 125px 0 0;
+    transform-origin: bottom center;
+}
+
+.quadrant:nth-child(2) {
+    top: 25%;
+    right: 0;
+    width: 50%;
+    height: 50%;
+    border-radius: 0 125px 125px 0;
+    transform-origin: center left;
+}
+
+.quadrant:nth-child(3) {
+    bottom: 0;
+    left: 25%;
+    width: 50%;
+    height: 50%;
+    border-radius: 0 0 125px 125px;
+    transform-origin: top center;
+}
+
+.quadrant:nth-child(4) {
+    top: 25%;
+    left: 0;
+    width: 50%;
+    height: 50%;
+    border-radius: 125px 0 0 125px;
+    transform-origin: center right;
+}
+
+.quadrant:nth-child(5) {
+    top: 0;
+    left: 0;
+    width: 50%;
+    height: 50%;
+    clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+
+.quadrant:nth-child(6) {
+    bottom: 0;
+    left: 0;
+    width: 50%;
+    height: 50%;
+    clip-path: polygon(0 100%, 100% 100%, 50% 0);
+}
+
+.center-circle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 50px;
+    height: 50px;
+    background-color: white;
+    border-radius: 50%;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.pointer {
+    width: 5px;
+    height: 25px;
+    background-color: var(--primary-color);
+    border-radius: 2px;
+    transform-origin: bottom center;
+}
+
+.selected-colors-container {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.selected-colors {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+.color-placeholder {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #f1f1f1;
+    border: 2px dashed #ccc;
+    transition: all 0.3s ease;
+}
+
+.color-placeholder.filled {
+    border-style: solid;
+    border-color: #333;
+}
+
+.quadrant.selected {
+    opacity: 0.8;
+    animation: pulse 1s infinite;
+}
+
+.quadrant.correct {
+    animation: correct-pulse 1s infinite;
+}
+
+.quadrant.wrong {
+    animation: wrong-pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.8; }
+    50% { opacity: 1; }
+    100% { opacity: 0.8; }
+}
+
+@keyframes correct-pulse {
+    0% { opacity: 0.8; }
+    50% { opacity: 1; box-shadow: 0 0 10px rgba(76, 175, 80, 0.8); }
+    100% { opacity: 0.8; }
+}
+
+@keyframes wrong-pulse {
+    0% { opacity: 0.8; }
+    50% { opacity: 1; box-shadow: 0 0 10px rgba(244, 67, 54, 0.8); }
+    100% { opacity: 0.8; }
+}
+
+.rotary-instructions {
+    background-color: var(--card-background);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    margin: 20px 0;
+    text-align: center;
+}
+
+.auth-methods {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.auth-method-button {
+    padding: 10px 20px;
+    background-color: var(--background-color);
+    border: 2px solid var(--secondary-color);
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.auth-method-button.active {
+    background-color: var(--secondary-color);
+    color: white;
+}
+
+.sensor-mode-indicator {
+    text-align: center;
+    margin: 15px 0;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.status-message {
+    margin-top: 15px;
+    padding: 8px;
+    border-radius: 4px;
+    font-weight: 500;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.status-message.success {
+    background-color: rgba(76, 175, 80, 0.2);
+    color: #388e3c;
+}
+
+.status-message.error {
+    background-color: rgba(244, 67, 54, 0.2);
+    color: #d32f2f;
+}
+
+#rotary-angle-display {
+    font-size: 1.2rem;
+    font-weight: bold;
+    text-align: center;
+    margin-top: 10px;
+}
+
+/* Color selection in settings page */
+.color-sequence-container {
+    margin-top: 15px;
+}
+
+.color-select-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.color-select {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.color-circle {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    margin-bottom: 5px;
+}
+
+.color-sequence {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    flex-wrap: wrap;
+}
+
+.sequence-position {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.sequence-position-label {
+    font-size: 0.8rem;
+    margin-top: 5px;
+}

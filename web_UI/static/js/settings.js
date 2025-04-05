@@ -39,6 +39,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Show pattern in the visual representation
                 updatePatternStepsDisplay(settings.customPattern);
             }
+            
+            // Load rotary color sequence if available
+            if (settings.colorSequence && settings.colorSequence.length > 0) {
+                // Populate color sequence in the UI
+                populateColorSequence(settings.colorSequence);
+            } else {
+                // Use default sequence
+                const defaultColorSequence = ['red', 'blue', 'green', 'yellow'];
+                populateColorSequence(defaultColorSequence);
+            }
         })
         .catch(error => {
             console.warn('Could not load settings:', error);
@@ -240,6 +250,151 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    // === Rotary Color Sequence Configuration ===
+    
+    // Add color sequence section to the settings form if it doesn't exist
+    const settingsForm = document.getElementById('settings-form');
+    if (settingsForm && !document.querySelector('.color-sequence-container')) {
+        // Create the color sequence configuration section
+        const colorSequenceSection = document.createElement('div');
+        colorSequenceSection.className = 'form-group';
+        colorSequenceSection.innerHTML = `
+            <label>Rotary Color Sequence Password</label>
+            <p class="help-text">Select a sequence of colors to use as your rotary lock password.</p>
+            <div class="color-sequence-container">
+                <div class="color-sequence" id="color-sequence">
+                    <!-- Color sequence will be populated here -->
+                </div>
+                <div class="color-select-grid">
+                    <div class="color-select" data-color="red">
+                        <div class="color-circle" style="background-color: #FF6B6B;"></div>
+                        <span>Red</span>
+                    </div>
+                    <div class="color-select" data-color="blue">
+                        <div class="color-circle" style="background-color: #4ECDC4;"></div>
+                        <span>Blue</span>
+                    </div>
+                    <div class="color-select" data-color="green">
+                        <div class="color-circle" style="background-color: #59CD90;"></div>
+                        <span>Green</span>
+                    </div>
+                    <div class="color-select" data-color="yellow">
+                        <div class="color-circle" style="background-color: #EAC435;"></div>
+                        <span>Yellow</span>
+                    </div>
+                    <div class="color-select" data-color="purple">
+                        <div class="color-circle" style="background-color: #9370DB;"></div>
+                        <span>Purple</span>
+                    </div>
+                    <div class="color-select" data-color="orange">
+                        <div class="color-circle" style="background-color: #FF9F1C;"></div>
+                        <span>Orange</span>
+                    </div>
+                </div>
+                <button type="button" id="reset-sequence" class="btn small">Reset Sequence</button>
+            </div>
+        `;
+        
+        // Insert before the submit button
+        const submitButton = settingsForm.querySelector('button[type="submit"]');
+        if (submitButton) {
+            settingsForm.insertBefore(colorSequenceSection, submitButton);
+        } else {
+            settingsForm.appendChild(colorSequenceSection);
+        }
+        
+        // Add event listeners for color selection
+        document.querySelectorAll('.color-select').forEach(colorSelect => {
+            colorSelect.addEventListener('click', function() {
+                const color = this.dataset.color;
+                const colorSequence = document.getElementById('color-sequence');
+                const currentPositions = colorSequence.querySelectorAll('.sequence-position');
+                
+                // Maximum of 4 colors in the sequence
+                if (currentPositions.length < 4) {
+                    addColorToSequence(color);
+                }
+            });
+        });
+        
+        // Add event listener for resetting the sequence
+        document.getElementById('reset-sequence').addEventListener('click', function() {
+            const colorSequence = document.getElementById('color-sequence');
+            colorSequence.innerHTML = '';
+        });
+    }
+    
+    // Function to populate the color sequence from settings
+    function populateColorSequence(colors) {
+        const colorSequence = document.getElementById('color-sequence');
+        if (!colorSequence) return;
+        
+        // Clear existing sequence
+        colorSequence.innerHTML = '';
+        
+        // Add each color to the sequence
+        colors.forEach(color => {
+            addColorToSequence(color);
+        });
+    }
+    
+    // Function to add a color to the sequence
+    function addColorToSequence(color) {
+        const colorSequence = document.getElementById('color-sequence');
+        const currentPositions = colorSequence.querySelectorAll('.sequence-position');
+        const position = currentPositions.length + 1;
+        
+        // Get the background color for this color name
+        const colorElement = document.querySelector(`.color-select[data-color="${color}"]`);
+        const colorCircle = colorElement ? colorElement.querySelector('.color-circle') : null;
+        const backgroundColor = colorCircle ? 
+            getComputedStyle(colorCircle).backgroundColor : 
+            getColorValue(color);
+        
+        // Create the sequence position element
+        const sequencePosition = document.createElement('div');
+        sequencePosition.className = 'sequence-position';
+        sequencePosition.dataset.color = color;
+        sequencePosition.innerHTML = `
+            <div class="color-circle" style="background-color: ${backgroundColor}"></div>
+            <span class="sequence-position-label">Position ${position}</span>
+            <button type="button" class="remove-color-btn">✕</button>
+        `;
+        
+        // Add remove button handler
+        sequencePosition.querySelector('.remove-color-btn').addEventListener('click', function() {
+            sequencePosition.remove();
+            updateSequencePositions();
+        });
+        
+        // Add to the sequence
+        colorSequence.appendChild(sequencePosition);
+    }
+    
+    // Function to update position numbers after removing colors
+    function updateSequencePositions() {
+        const positions = document.querySelectorAll('#color-sequence .sequence-position');
+        positions.forEach((position, index) => {
+            const positionLabel = position.querySelector('.sequence-position-label');
+            if (positionLabel) {
+                positionLabel.textContent = `Position ${index + 1}`;
+            }
+        });
+    }
+    
+    // Helper function to get color value by name
+    function getColorValue(colorName) {
+        const colorMap = {
+            'red': '#FF6B6B',
+            'blue': '#4ECDC4',
+            'green': '#59CD90',
+            'yellow': '#EAC435',
+            'purple': '#9370DB',
+            'orange': '#FF9F1C'
+        };
+        return colorMap[colorName] || '#cccccc';
+    }
+    
     // Handle settings form submission
     document.getElementById('settings-form').addEventListener('submit', function(event) {
         event.preventDefault();
@@ -283,13 +438,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 { action: 'tap', duration: 0 }
             ];
         }
+
+        // Get rotary color sequence
+        let colorSequence = [];
+        document.querySelectorAll('#color-sequence .sequence-position').forEach(position => {
+            colorSequence.push(position.dataset.color);
+        });
+
+        // Default color sequence if none is set
+        if (colorSequence.length === 0) {
+            colorSequence = ['red', 'blue', 'green', 'yellow'];
+        }
+
+        // Save color sequence to localStorage as well for immediate use in dashboard
+        localStorage.setItem('colorSequencePassword', JSON.stringify(colorSequence));
         
         const formData = {
             securityLevel: document.getElementById('security-level')?.value || 'high',
             notificationEmail: document.getElementById('notification-email')?.value || '',
             notifySuccess: document.getElementById('notify-success')?.checked || false,
             notifyFailure: document.getElementById('notify-failure')?.checked || true,
-            customPattern: formPatternSteps
+            customPattern: formPatternSteps,
+            colorSequence: colorSequence
         };
         
         fetch('/api/settings', {
