@@ -90,12 +90,13 @@ def load_settings():
         'notificationEmail': '',
         'notifySuccess': False,
         'notifyFailure': True,
-        'customPattern': [{"action": "tap", "duration": 0}, {"action": "hold", "duration": 1000}, {"action": "tap", "duration": 0}]
+        'customPattern': [{"action": "tap", "duration": 0}, {"action": "hold", "duration": 1000}, {"action": "tap", "duration": 0}],
+        'colorSequence': ['red', 'blue', 'green', 'yellow']  # Default color sequence
     }
 
 def save_settings(settings):
     """Save settings to the settings file."""
-    with open(SETTINGS_FILE_PATH, 'w') as file, open(LOG_FILE_PATH, 'w') as log_file:
+    with open(SETTINGS_FILE_PATH, 'w') as file:
         json.dump(settings, file, indent=4)
 
 auth_log_entries = load_logs()
@@ -464,33 +465,43 @@ def handle_settings():
             settings = current_settings
             save_settings(settings)
             
+            # Track if we need to restart all_sensors
+            restart_all_sensors = False
+            pattern_saved = False
+            color_sequence_saved = False
+            
             # Save and update the custom pattern if it was changed
             if 'customPattern' in updated_settings:
                 custom_pattern = updated_settings['customPattern']
                 pattern_saved = save_pattern_to_json(custom_pattern)
-                
-                # If Pico is connected, try to update the pattern on the device
-                pattern_updated = False
-                if pico_connected:
-                    try:
-                        pattern_updated = update_sensor_pattern(custom_pattern)
-                    except Exception as e:
-                        logger.error(f"Error updating pattern on device: {e}")
-                
-                # Return detailed status
-                return jsonify({
-                    'status': 'success',
-                    'pattern_saved': pattern_saved,
-                    'pattern_updated_on_device': pattern_updated if pico_connected else None,
-                    'pico_connected': pico_connected
-                })
+                restart_all_sensors = True
             
-            logger.info(f"Updated settings: {settings}")
-            return jsonify({'status': 'success'})
+            # Save and update the color sequence if it was changed
+            if 'colorSequence' in updated_settings:
+                color_sequence = updated_settings['colorSequence']
+                color_sequence_saved = save_color_sequence_to_json(color_sequence)
+                restart_all_sensors = True
+            
+            # If Pico is connected and we need to restart, do it once for all changes
+            pattern_updated = False
+            if restart_all_sensors and pico_connected:
+                try:
+                    pattern_updated = update_sensor_pattern()
+                except Exception as e:
+                    logger.error(f"Error updating sensors on device: {e}")
+            
+            # Return detailed status
+            return jsonify({
+                'status': 'success',
+                'pattern_saved': pattern_saved,
+                'color_sequence_saved': color_sequence_saved,
+                'pattern_updated_on_device': pattern_updated if pico_connected else None,
+                'pico_connected': pico_connected
+            })
+            
         except Exception as e:
             logger.error(f"Error handling settings: {e}")
             return jsonify({'status': 'error', 'message': str(e)}), 500
-        
 
 # Route to handle image uploads
 @app.route('/upload', methods=['POST'])
@@ -529,29 +540,28 @@ def upload_file():
             return jsonify({'status': 'error', 'message': 'Failed to save file path'}), 500
         
 
-def update_sensor_pattern(custom_pattern):
-    """Update the custom pattern for all_sensors.py and restart it"""
+def update_sensor_pattern():
+    """Update the sensor settings on the Pico and restart the sensors"""
     global pico_connected
     
-    # Save the pattern to a JSON file first
-    pattern_file_path = save_pattern_to_json(custom_pattern)
+    # Ensure we have the pattern and color sequence files
+    pattern_file_path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "touch",
+        "custom_pattern.json"
+    )
+    
+    color_sequence_file_path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "rotary",
+        "color_sequence.json"
+    )
     
     if not pico_connected:
-        logger.error("Pico is not connected. Cannot update sensor pattern.")
+        logger.error("Pico is not connected. Cannot update sensors.")
         return False
     
     try:
-        # Get the path to the all_sensors.py file
-        all_sensors_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "pico_sensors",
-            "all_sensors.py"
-        )
-        
-        if not os.path.exists(all_sensors_path):
-            logger.error(f"Cannot find source file at {all_sensors_path}")
-            return False
-        
         # Perform a complete reboot of the Pico
         logger.info("Performing complete reboot of the Pico...")
         
@@ -620,7 +630,7 @@ def update_sensor_pattern(custom_pattern):
             logger.error("Pico connection unstable after reconnection")
             return False
             
-        # Clear out any boot.py or main.py that might be auto-starting touch_lock
+        # Clear out any boot.py or main.py that might be auto-starting
         logger.info("Ensuring no auto-start scripts are present...")
         try:
             subprocess.run(["mpremote", "rm", ":boot.py"], capture_output=True, text=True)
@@ -631,43 +641,69 @@ def update_sensor_pattern(custom_pattern):
         except:
             pass
         
-        # Clean copy of touch_lock.py to the Pico
-        logger.info("Copying fresh touch_lock.py to Pico...")
-        try:
-            # Delete existing file first
-            subprocess.run(["mpremote", "rm", ":all_sensors.py"], capture_output=True, text=True)
-            time.sleep(0.5)
-            
-            # Copy the file
-            copy_result = subprocess.run(
-                ["mpremote", "cp", all_sensors_path, ":all_sensors.py"],
-                capture_output=True,
-                text=True,
-                check=True
-            )
-            logger.info("Successfully copied all_sensors.py to Pico")
-        except Exception as e:
-            logger.error(f"Failed to copy all_sensors.py: {e}")
+        # Get the path to the all_sensors.py file
+        all_sensors_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "pico_sensors",
+            "all_sensors.py"
+        )
+        
+        # Copy all_sensors.py to the Pico
+        if os.path.exists(all_sensors_path):
+            logger.info("Copying fresh all_sensors.py to Pico...")
+            try:
+                # Delete existing file first
+                subprocess.run(["mpremote", "rm", ":all_sensors.py"], capture_output=True, text=True)
+                time.sleep(0.5)
+                
+                # Copy the file
+                copy_result = subprocess.run(
+                    ["mpremote", "cp", all_sensors_path, ":all_sensors.py"],
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+                logger.info("Successfully copied all_sensors.py to Pico")
+            except Exception as e:
+                logger.error(f"Failed to copy all_sensors.py: {e}")
+                return False
+        else:
+            logger.error(f"Cannot find source file at {all_sensors_path}")
             return False
         
-        # Copy the custom pattern file
-        logger.info("Copying custom_pattern.json to Pico...")
-        try:
-            copy_result = subprocess.run(
-                ["mpremote", "cp", pattern_file_path, ":custom_pattern.json"],
-                capture_output=True,
-                text=True,
-                check=True
-            )
-            logger.info("Successfully copied custom_pattern.json to Pico")
-        except Exception as e:
-            logger.error(f"Failed to copy custom_pattern.json: {e}")
-            return False
+        # Copy the custom pattern file if it exists
+        if os.path.exists(pattern_file_path):
+            logger.info("Copying custom_pattern.json to Pico...")
+            try:
+                copy_result = subprocess.run(
+                    ["mpremote", "cp", pattern_file_path, ":custom_pattern.json"],
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+                logger.info("Successfully copied custom_pattern.json to Pico")
+            except Exception as e:
+                logger.error(f"Failed to copy custom_pattern.json: {e}")
+        
+        # Copy the color sequence file if it exists
+        if os.path.exists(color_sequence_file_path):
+            logger.info("Copying color_sequence.json to Pico...")
+            try:
+                copy_result = subprocess.run(
+                    ["mpremote", "cp", color_sequence_file_path, ":color_sequence.json"],
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+                logger.info("Successfully copied color_sequence.json to Pico")
+            except Exception as e:
+                logger.error(f"Failed to copy color_sequence.json: {e}")
         
         # Wait to ensure files are fully written
         time.sleep(1)
+        
         # Start all_sensors with a clean environment
-        logger.info("Starting all_sensors with new pattern...")
+        logger.info("Starting all_sensors with new settings...")
         launcher_script = (
             f'import gc\n'
             f'gc.collect()\n'
@@ -697,7 +733,7 @@ def update_sensor_pattern(custom_pattern):
                 timeout=3
             )
             if "All sensors started with fresh state" in result.stdout:
-                logger.info("Successfully started all_sensors with new pattern")
+                logger.info("Successfully started all_sensors with new settings")
                 return True
             else:
                 logger.warning(f"Unexpected output when starting all_sensors: {result.stdout}")
@@ -706,9 +742,8 @@ def update_sensor_pattern(custom_pattern):
             logger.error(f"Error executing launcher script: {e}")
             return False
         
-        return True
     except Exception as e:
-        logger.error(f"Error updating sensor pattern: {e}")
+        logger.error(f"Error updating sensor settings: {e}")
         return False
 
 def save_pattern_to_json(custom_pattern):
@@ -739,6 +774,39 @@ def save_pattern_to_json(custom_pattern):
         return pattern_file_path
     except Exception as e:
         logger.error(f"Error saving pattern to JSON: {e}")
+        return None
+
+def save_color_sequence_to_json(color_sequence):
+    """Save the color sequence to settings.json"""
+    try:
+        # Update the color sequence in settings
+        settings['colorSequence'] = color_sequence
+        save_settings(settings)
+        
+        # Create a separate color sequence JSON file for the Pico
+        color_sequence_dir = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "rotary"
+        )
+        color_sequence_file_path = os.path.join(color_sequence_dir, "color_sequence.json")
+        
+        # Ensure the directory exists
+        os.makedirs(color_sequence_dir, exist_ok=True)
+        
+        # Format the color sequence for saving
+        sequence_data = {
+            "sequence": color_sequence,
+            "created_at": datetime.now().isoformat()
+        }
+        
+        # Write the color sequence to the file
+        with open(color_sequence_file_path, 'w') as f:
+            json.dump(sequence_data, f, indent=4)
+        
+        logger.info(f"Color sequence saved to {color_sequence_file_path}")
+        return color_sequence_file_path
+    except Exception as e:
+        logger.error(f"Error saving color sequence to JSON: {e}")
         return None
 
 def update_audio():
