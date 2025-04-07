@@ -2,27 +2,97 @@
 
 {% block content %}
 <section id="dashboard">
-    <div class="card">
-        <h2 class="section-title">Security Dashboard</h2>
-        <p style="text-align: center; color: var(--secondary-color); font-weight: bold;">
-            Showing data for: <span id="current-date"></span>
-        </p>
-        <div class="stats">
-            <div class="stat-card">
-                <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
-                <div class="stat-value" id="successful-auth-count">0</div>
-                <div class="stat-label">Successful Authentications</div>
+    <!-- Authentication Method Selector - Full Width -->
+    <div class="card full-width">
+        <h2 class="section-title">Authentication Method</h2>
+        <div class="auth-method-selector">
+            <button class="auth-button" data-method="face">Face Recognition</button>
+            <button class="auth-button" data-method="voice">Voice Recognition</button>
+            <button class="auth-button" data-method="keypad">Keypad Access</button>
+            <button class="auth-button active" data-method="touch">Tap Pattern</button>
+            <button class="auth-button" data-method="rotary">Rotary Combination</button>
+        </div>
+    </div>
+    
+    <!-- Two-column layout for Dashboard and Events -->
+    <div class="dashboard-grid">
+        <!-- Security Dashboard - Left Column -->
+        <div class="card">
+            <h2 class="section-title">Security Dashboard</h2>
+            <p style="text-align: center; color: var(--secondary-color); font-weight: bold;">
+                Showing data for: <span id="current-date"></span>
+            </p>
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="stat-value" id="successful-auth-count">0</div>
+                    <div class="stat-label">Successful Authentications</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
+                    <div class="stat-value" id="failed-auth-count">0</div>
+                    <div class="stat-label">Failed Attempts</div>
+                </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
-                <div class="stat-value" id="failed-auth-count">0</div>
-                <div class="stat-label">Failed Attempts</div>
+        </div>
+        
+        <!-- Live Events - Right Column -->
+        <div class="card">
+            <h2 class="section-title">Live Authentication Events</h2>
+            <div class="events-container" style="max-height: 300px; overflow-y: auto; scrollbar-width: thin;">
+                <ul id="live-events" class="live-events-list"></ul>
             </div>
         </div>
     </div>
-    <div class="card">
-        <h2 class="section-title">Live Authentication Events</h2>
-        <ul id="live-events" class="live-events-list"></ul>
+
+    <!-- Add to your dashboard.html or other templates where needed -->
+    <div class="sensor-mode-indicator">
+        Current Mode: <span id="current-sensor-mode">Idle</span>
+    </div>
+
+    <div class="auth-methods">
+        <div class="auth-method-button" id="touch-method">
+            <i class="fas fa-hand-pointer"></i> Touch Pattern
+        </div>
+        <div class="auth-method-button" id="rotary-method">
+            <i class="fas fa-sync-alt"></i> Rotary Input
+        </div>
+    </div>
+
+    <div class="touch-instructions">
+        <!-- Your existing touch pattern instructions -->
+    </div>
+
+    <div class="rotary-instructions" style="display: none;">
+        <h3>Rotary Authentication</h3>
+        <p>Turn the dial to point to the correct sequence of colors.</p>
+        <p class="instruction-step">Wait 3 seconds on each color to select it. Keep in mind that turning the rotary knob has a bit of lag!</p>
+        
+        <div class="rotary-lock-container">
+            <div class="circular-lock">
+                <div class="quadrant" data-color="red" style="background-color: #FF6B6B;"></div>
+                <div class="quadrant" data-color="blue" style="background-color: #4ECDC4;"></div>
+                <div class="quadrant" data-color="green" style="background-color: #59CD90;"></div>
+                <div class="quadrant" data-color="yellow" style="background-color: #EAC435;"></div>
+                <div class="quadrant" data-color="purple" style="background-color: #9370DB;"></div>
+                <div class="quadrant" data-color="orange" style="background-color: #FF9F1C;"></div>
+                <div class="center-circle">
+                    <div class="pointer"></div>
+                </div>
+            </div>
+            <div class="selected-colors-container">
+                <p>Selected Colors:</p>
+                <div id="selected-colors" class="selected-colors">
+                    <div class="color-placeholder"></div>
+                    <div class="color-placeholder"></div>
+                    <div class="color-placeholder"></div>
+                    <div class="color-placeholder"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="rotary-angle-display">0°</div>
+        <div id="rotary-status" class="status-message"></div>
     </div>
 </section>
 {% endblock %}
