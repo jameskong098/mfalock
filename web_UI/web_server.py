@@ -20,11 +20,13 @@ import threading
 import logging
 import subprocess
 import pickle
+import paramiko
 from datetime import datetime
 from flask import Flask, render_template, jsonify, request, send_from_directory
 from flask_socketio import SocketIO, emit
 import uuid
 import tempfile
+import socket
 
 # Configure logging
 logging.basicConfig(
@@ -442,37 +444,122 @@ def upload_file():
     if file.filename == '':
         return jsonify({'status': 'error', 'message': 'No selected file'}), 400
     if file:
-        # Save the uploaded image
+        # Save the uploaded image locally
         upload_folder = os.path.join('camera', 'faces')
         os.makedirs(upload_folder, exist_ok=True)  # Ensure the upload folder exists
         image_path = os.path.join(upload_folder, file.filename)
-        print(image_path)
         file.save(image_path)
-
-        # Save the file path to a pickle file
-        pickle_file = os.path.join(upload_folder, 'uploaded_images.pkl')
-        try:
-            if os.path.exists(pickle_file):
-                with open(pickle_file, 'rb') as f:
-                    uploaded_images = pickle.load(f)
-            else:
-                uploaded_images = []
-
-            uploaded_images.append(image_path)
-
-            with open(pickle_file, 'wb') as f:
-                pickle.dump(uploaded_images, f)
-
-            return jsonify({'status': 'success'})
-            # return jsonify({'status': 'success', 'message': 'File uploaded successfully', 'path': image_path}), 200
-        except Exception as e:
-            logger.error(f"Error saving to pickle file: {e}")
-            return jsonify({'status': 'error', 'message': 'Failed to save file path'}), 500
+        logger.info(f"Image saved locally at: {image_path}")
         
-# Function to transfer a file to the Pico via mpremote
-# def transfer_file_to_pi(local_path, remote_path, pi_ip, username, apssword):
-#     try: 
-#         ssh = paramiko.SSHClient()  
+        try:
+            # Define remote path on the Raspberry Pi
+            raspberry_pi_ip = '172.20.231.165'
+            username = 'yunus'
+            password = 'yunus'
+            remote_path = f'/home/yunus/fac-rec-env/{file.filename}'
+            
+            # Transfer the image directly to the Raspberry Pi
+            transfer_status, message = transfer_file_to_pi(image_path, remote_path, raspberry_pi_ip, username, password)
+            
+            if transfer_status:
+                logger.info("Image transfer successful")
+                return jsonify({
+                    'status': 'success', 
+                    'message': 'Image uploaded and transferred successfully',
+                    'path': image_path
+                })
+            else:
+                logger.error(f"Image transfer failed: {message}")
+                return jsonify({
+                    'status': 'partial_success', 
+                    'message': f'Image uploaded locally but transfer failed: {message}',
+                    'path': image_path
+                }), 207
+        except Exception as e:
+            logger.error(f"Error during image upload process: {e}")
+            return jsonify({'status': 'error', 'message': f'Failed to process image: {str(e)}'}), 500
+
+
+# Function to transfer a file to the Raspberry Pi via SSH/SFTP
+def transfer_file_to_pi(local_path, remote_path, pi_ip, username, password):
+    """
+    Transfer a file to the Raspberry Pi and verify the transfer
+    
+    Returns:
+        tuple: (success_status, message)
+    """
+    ssh = None
+    sftp = None
+    
+    try: 
+        # Log connection attempt
+        logger.info(f"Connecting to Raspberry Pi at {pi_ip}...")
+        
+        # Set up SSH client
+        ssh = paramiko.SSHClient()  
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        
+        # Connect with timeout
+        ssh.connect(
+            pi_ip, 
+            username=username, 
+            password=password,
+            timeout=10  # 10 second timeout
+        )
+        logger.info("SSH connection established")
+         
+        # Open SFTP session
+        sftp = ssh.open_sftp()
+        
+        # Ensure remote directory exists
+        remote_dir = os.path.dirname(remote_path)
+        try:
+            # Try to create the directory (will fail if it exists, which is fine)
+            stdin, stdout, stderr = ssh.exec_command(f"mkdir -p {remote_dir}")
+            exit_status = stdout.channel.recv_exit_status()
+            if exit_status != 0:
+                logger.warning(f"mkdir command returned non-zero exit status: {exit_status}")
+        except Exception as e:
+            logger.warning(f"Error ensuring remote directory exists: {e}")
+        
+        # Get local file size for verification
+        local_size = os.path.getsize(local_path)
+        logger.info(f"Local image size: {local_size} bytes")
+        
+        # Transfer the file
+        logger.info(f"Transferring image {local_path} to {remote_path}...")
+        sftp.put(local_path, remote_path)
+        
+        # Verify the transfer by checking file existence and size
+        try:
+            # Check if file exists and get its size
+            remote_stat = sftp.stat(remote_path)
+            remote_size = remote_stat.st_size
+            logger.info(f"Remote image size: {remote_size} bytes")
+            
+            if remote_size == local_size:
+                return True, "Image transferred and verified successfully"
+            else:
+                return False, f"Size mismatch: Local {local_size} bytes, Remote {remote_size} bytes"
+                
+        except FileNotFoundError:
+            return False, "Image not found on remote system after transfer"
+            
+    except paramiko.AuthenticationException:
+        return False, "Authentication failed. Check username and password."
+    except paramiko.SSHException as e:
+        return False, f"SSH connection error: {str(e)}"
+    except socket.timeout:
+        return False, "Connection timed out. Check IP address and network."
+    except Exception as e:
+        return False, f"Error: {str(e)}"
+    finally:
+        # Clean up
+        if sftp:
+            sftp.close()
+        if ssh:
+            ssh.close()
+
 
 
 def update_touch_lock_pattern(custom_pattern):
