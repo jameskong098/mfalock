@@ -12,7 +12,7 @@ Date: February 27, 2025
 """
 
 from vosk import Model, KaldiRecognizer
-from audio.utils.random_utils import gen_phrase
+import random_utils
 import pyaudio
 import json
 
@@ -37,7 +37,7 @@ stream = audio.open(format=pyaudio.paInt16, channels=1, rate=16000,
                     input=True, frames_per_buffer=4096, input_device_index=mic_index)
 stream.start_stream()
 
-phrase = gen_phrase(5)
+phrase = random_utils.gen_phrase(5)
 print(f"Listening... Say this phrase: {phrase}!")
 
 
