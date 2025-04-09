@@ -18,7 +18,7 @@ import pyaudio
 import json
 
 
-# Load the Vosk Model (Ensure "vosk_model" folder is in the same directory)
+# Load the Vosk Model
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 model_path = os.path.join(parent_dir, "vosk_model")
 model = Model(model_path)
@@ -27,7 +27,7 @@ recognizer = KaldiRecognizer(model, 16000)
 # Initialize PyAudio
 audio = pyaudio.PyAudio()
 
-# Find the correct microphone index (useful for ReSpeaker Mic Array)
+# Find the correct microphone index
 mic_index = None
 for i in range(audio.get_device_count()):
     info = audio.get_device_info_by_index(i)
