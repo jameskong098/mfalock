@@ -3,6 +3,7 @@
 auth_logs.json
 custom_pattern.json
 settings.json
+color_sequence.json
 
 
 # Byte-compiled / optimized / DLL files
