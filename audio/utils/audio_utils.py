@@ -11,14 +11,17 @@ Author: Omorogieva Ogieva
 Date: February 27, 2025
 """
 
+import os
 from vosk import Model, KaldiRecognizer
-import random_utils
+from random_utils import gen_phrase
 import pyaudio
 import json
 
 
 # Load the Vosk Model (Ensure "vosk_model" folder is in the same directory)
-model = Model("vosk_model")
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+model_path = os.path.join(parent_dir, "vosk_model")
+model = Model(model_path)
 recognizer = KaldiRecognizer(model, 16000)
 
 # Initialize PyAudio
@@ -37,7 +40,7 @@ stream = audio.open(format=pyaudio.paInt16, channels=1, rate=16000,
                     input=True, frames_per_buffer=4096, input_device_index=mic_index)
 stream.start_stream()
 
-phrase = random_utils.gen_phrase(5)
+phrase = gen_phrase(5)
 print(f"Listening... Say this phrase: {phrase}!")
 
 
@@ -49,7 +52,7 @@ try:
             text = result.get("text", "")  # Extract recognized text
             if text:
                 print(f"You said: {text}")
-                if text == phrase:
+                if text.lower() == phrase.lower():
                     print("Correct... Opening!!!")
 except KeyboardInterrupt:
     print(" Stopping...")
