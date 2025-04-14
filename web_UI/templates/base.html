@@ -13,12 +13,17 @@
     <header>
         <div class="container">
             <div class="header-content">
-                <div class="logo">
-                    <i class="fas fa-fingerprint"></i>
-                    <h1>MFA Lock Security</h1>
+                <div class="header-top">
+                    <div class="logo">
+                        <i class="fas fa-fingerprint"></i>
+                        <h1>MFA Lock Security</h1>
+                    </div>
+                    <button class="mobile-menu-toggle" id="mobile-menu-toggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
                 </div>
                 <nav>
-                    <ul>
+                    <ul id="mobile-menu">
                         <li><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
                         <li><a href="{{ url_for('how_it_works') }}">How It Works</a></li>
                         <li><a href="{{ url_for('auth_logs') }}">Auth Logs</a></li>

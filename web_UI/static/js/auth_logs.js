@@ -19,6 +19,9 @@ document.addEventListener('DOMContentLoaded', function() {
             oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
             const startDateInput = document.getElementById('start-date');
             startDateInput.valueAsDate = oneWeekAgo;
+            
+            // Add responsive classes for mobile
+            addResponsiveListeners();
         })
         .catch(error => {
             console.error('Error fetching logs:', error);
@@ -75,6 +78,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
         });
     }
+    
+    // Add responsive event listeners for mobile devices
+    function addResponsiveListeners() {
+        // Handle orientation changes to refresh table layout
+        window.addEventListener('orientationchange', function() {
+            setTimeout(function() {
+                // Give browser time to repaint before potentially re-populating logs
+                const tableBody = document.getElementById('log-table-body');
+                if (tableBody.children.length > 0) {
+                    fetch('/api/logs')
+                        .then(response => response.json())
+                        .then(data => {
+                            const sortedLogs = data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                            populateLogs(sortedLogs);
+                        })
+                        .catch(error => {
+                            console.error('Error refreshing logs after orientation change:', error);
+                        });
+                }
+            }, 200);
+        });
+    }
 });
 
 // Populate log table
@@ -106,6 +131,7 @@ function populateLogs(logs) {
         const deleteButton = document.createElement('button');
         deleteButton.textContent = 'Delete';
         deleteButton.className = 'btn delete-btn';
+        deleteButton.setAttribute('aria-label', 'Delete log entry');
         deleteButton.addEventListener('click', () => {
             if (confirm('Are you sure you want to delete this log?')) {
                 // Send a DELETE request to the server to remove the log
@@ -113,6 +139,11 @@ function populateLogs(logs) {
                     .then(response => response.json())
                     .then(data => {
                         if (data.status === 'success') {
+                            // Show feedback on mobile
+                            if (window.innerWidth <= 768) {
+                                showNotification('Log entry deleted successfully', 'success');
+                            }
+                            
                             // Fetch logs again to update the table
                             fetch('/api/logs')
                                 .then(response => response.json())
@@ -124,12 +155,12 @@ function populateLogs(logs) {
                                     console.error('Error fetching logs:', error);
                                 });
                         } else {
-                            alert(`Error: ${data.message}`);
+                            showNotification(`Error: ${data.message}`, 'error');
                         }
                     })
                     .catch(error => {
                         console.error('Error deleting log:', error);
-                        alert('An error occurred while deleting the log.');
+                        showNotification('An error occurred while deleting the log.', 'error');
                     });
             }
         });
@@ -144,4 +175,54 @@ function populateLogs(logs) {
 
         tableBody.appendChild(row);
     });
+    
+    // If no logs found
+    if (logs.length === 0) {
+        const emptyRow = document.createElement('tr');
+        const emptyCell = document.createElement('td');
+        emptyCell.colSpan = 6;
+        emptyCell.textContent = 'No logs found matching your criteria';
+        emptyCell.style.textAlign = 'center';
+        emptyCell.style.padding = '20px';
+        emptyRow.appendChild(emptyCell);
+        tableBody.appendChild(emptyRow);
+    }
+}
+
+// Display notification for mobile feedback
+function showNotification(message, type) {
+    // Remove any existing notifications
+    const existingNotifications = document.querySelectorAll('.notification');
+    existingNotifications.forEach(notification => notification.remove());
+    
+    // Create and add the new notification
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    
+    // Add to the top of the auth-logs section
+    const authLogsSection = document.getElementById('auth-logs');
+    authLogsSection.insertBefore(notification, authLogsSection.firstChild);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        notification.classList.add('fade-out');
+        setTimeout(() => {
+            notification.remove();
+        }, 500);
+    }, 3000);
+}
+
+// If formatDate function is missing, define it
+if (typeof formatDate !== 'function') {
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
 }
