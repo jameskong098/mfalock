@@ -13,6 +13,8 @@ This project implements a rotary angle sensor lock mechanism that simulates a ph
 
 The rotary angle sensor is connected to analog pin GP28 of the microcontroller.
 
+![Pico Shield Reference](../../web_UI/static/images/rotary_angle_setup.png)
+
 ![Pin Reference](../../web_UI/static/images/Pin_Reference.png)
 
 [Will Insert Image of Physical Wire Connection Soon!]
