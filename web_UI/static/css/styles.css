@@ -59,20 +59,42 @@ header {
 nav ul {
     display: flex;
     list-style: none;
+    flex-wrap: nowrap; 
 }
 
 nav ul li {
     margin-left: 20px;
+    white-space: nowrap; 
 }
 
 nav ul li a {
     color: white;
     text-decoration: none;
     transition: color 0.3s;
+    padding: 8px 12px;
+    display: inline-block;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+nav ul li a:after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    bottom: 0;
+    left: 50%;
+    background-color: var(--secondary-color);
+    transition: all 0.3s ease;
+    transform: translateX(-50%);
 }
 
 nav ul li a:hover {
     color: var(--secondary-color);
+}
+
+nav ul li a:hover:after {
+    width: 70%;
 }
 
 .card {
@@ -389,6 +411,173 @@ tr:hover {
     
     .search-box, .date-filter {
         width: 100%;
+    }
+}
+
+/* Mobile Menu Styles */
+.mobile-menu-toggle {
+    display: none;
+    cursor: pointer;
+    font-size: 24px;
+    color: white;
+    background: none;
+    border: none;
+    padding: 5px;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    transition: all 0.3s ease;
+}
+
+.mobile-menu-toggle:focus {
+    outline: none;
+}
+
+@media (max-width: 768px) {
+    .header-content {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .logo {
+        margin-bottom: 15px;
+    }
+    
+    nav {
+        width: 100%;
+    }
+    
+    nav ul {
+        flex-direction: column;
+        align-items: center;
+        margin-top: 0;
+        overflow: hidden;
+        max-height: 0;
+        transition: max-height 0.3s ease-out;
+    }
+    
+    nav ul.open {
+        max-height: 500px;
+        padding: 10px 0;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        background-color: var(--primary-color);
+        margin-top: 5px;
+        border-radius: var(--border-radius);
+    }
+    
+    nav ul li {
+        width: 100%;
+        margin: 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    nav ul li:last-child {
+        border-bottom: none;
+    }
+    
+    nav ul li a {
+        padding: 15px 0;
+        width: 100%;
+        font-size: 16px;
+    }
+    
+    nav ul li a:after {
+        display: none;
+    }
+    
+    nav ul li a:active {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .mobile-menu-toggle {
+        display: flex;
+        position: absolute;
+        top: 20px;
+        right: 20px;
+    }
+    
+    .mobile-menu-toggle i {
+        transition: transform 0.3s ease;
+    }
+    
+    .mobile-menu-toggle i.fa-times {
+        transform: rotate(180deg);
+    }
+    
+    .connection-status-container {
+        margin: 10px auto;
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .auth-method {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .filter-controls {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .search-box, .date-filter {
+        width: 100%;
+    }
+}
+
+/* Responsive styling for the header-top section */
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    position: relative;
+    padding: 0 20px;
+}
+
+@media (max-width: 768px) {
+    .header-top {
+        padding: 0 10px;
+    }
+    
+    .header-content {
+        flex-direction: column;
+        padding: 0;
+    }
+    
+    header {
+        padding: 15px 0;
+    }
+    
+    .logo h1 {
+        font-size: 20px;
+    }
+    
+    .logo i {
+        font-size: 24px;
+    }
+}
+
+/* Medium sized screens */
+@media (min-width: 601px) and (max-width: 768px) {
+    .header-top {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .logo {
+        margin-bottom: 0;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    nav ul li {
+        margin-left: 15px;
+    }
+    
+    nav ul li a {
+        font-size: 14px;
     }
 }
 
@@ -769,67 +958,57 @@ tr:hover {
     border-radius: 50%;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
     margin-bottom: 20px;
+    overflow: hidden;
 }
 
 .quadrant {
     position: absolute;
-    width: 50%;
-    height: 50%;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transform-origin: center;
+    clip-path: polygon(50% 50%, 50% 0%, 100% 0%, 100% 100%, 50% 100%);
 }
 
-/* Position the 6 quadrants in a circle */
+/* Position each color as a slice of the pie */
 .quadrant:nth-child(1) {
-    top: 0;
-    left: 25%;
-    width: 50%;
-    height: 50%;
-    border-radius: 125px 125px 0 0;
-    transform-origin: bottom center;
+    /* Red - Top */
+    transform: rotate(0deg);
+    clip-path: polygon(50% 50%, 50% 0%, 100% 0%, 100% 33%, 66% 50%);
 }
 
 .quadrant:nth-child(2) {
-    top: 25%;
-    right: 0;
-    width: 50%;
-    height: 50%;
-    border-radius: 0 125px 125px 0;
-    transform-origin: center left;
+    /* Blue - Top Right */
+    transform: rotate(60deg);
+    clip-path: polygon(50% 50%, 50% 0%, 100% 0%, 100% 33%, 66% 50%);
 }
 
 .quadrant:nth-child(3) {
-    bottom: 0;
-    left: 25%;
-    width: 50%;
-    height: 50%;
-    border-radius: 0 0 125px 125px;
-    transform-origin: top center;
+    /* Green - Bottom Right */
+    transform: rotate(120deg);
+    clip-path: polygon(50% 50%, 50% 0%, 100% 0%, 100% 33%, 66% 50%);
 }
 
 .quadrant:nth-child(4) {
-    top: 25%;
-    left: 0;
-    width: 50%;
-    height: 50%;
-    border-radius: 125px 0 0 125px;
-    transform-origin: center right;
+    /* Yellow - Bottom */
+    transform: rotate(180deg);
+    clip-path: polygon(50% 50%, 50% 0%, 100% 0%, 100% 33%, 66% 50%);
 }
 
 .quadrant:nth-child(5) {
-    top: 0;
-    left: 0;
-    width: 50%;
-    height: 50%;
-    clip-path: polygon(0 0, 100% 0, 50% 100%);
+    /* Purple - Bottom Left */
+    transform: rotate(240deg);
+    clip-path: polygon(50% 50%, 50% 0%, 100% 0%, 100% 33%, 66% 50%);
 }
 
 .quadrant:nth-child(6) {
-    bottom: 0;
-    left: 0;
-    width: 50%;
-    height: 50%;
-    clip-path: polygon(0 100%, 100% 100%, 50% 0);
+    /* Orange - Top Left */
+    transform: rotate(300deg);
+    clip-path: polygon(50% 50%, 50% 0%, 100% 0%, 100% 33%, 66% 50%);
 }
 
+/* Keep the center circle and pointer styling */
 .center-circle {
     position: absolute;
     top: 50%;
@@ -1015,4 +1194,124 @@ tr:hover {
 .sequence-position-label {
     font-size: 0.8rem;
     margin-top: 5px;
+}
+
+@media (max-width: 768px) {
+    /* Responsive styling for auth logs table */
+    #auth-logs table, 
+    #auth-logs thead, 
+    #auth-logs tbody, 
+    #auth-logs th, 
+    #auth-logs td, 
+    #auth-logs tr { 
+        display: block; 
+    }
+    
+    #auth-logs thead tr { 
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+    }
+    
+    #auth-logs tr { 
+        border: 1px solid #ddd;
+        margin-bottom: 15px;
+        border-radius: var(--border-radius);
+    }
+    
+    #auth-logs td { 
+        border: none;
+        border-bottom: 1px solid #eee; 
+        position: relative;
+        padding-left: 50%; 
+        white-space: normal;
+        text-align: left;
+        min-height: 30px;
+        padding-top: 16px;  
+        padding-bottom: 16px; 
+    }
+    
+    #auth-logs td:last-child {
+        border-bottom: 0;
+        text-align: center;
+        padding-left: 12px;
+    }
+    
+    #auth-logs td:before { 
+        position: absolute;
+        top: 16px;  
+        left: 12px;
+        width: 45%; 
+        padding-right: 10px; 
+        white-space: nowrap;
+        text-align: left;
+        font-weight: bold;
+    }
+    
+    /* Add labels for each cell on mobile */
+    #auth-logs td:nth-of-type(1):before { content: "Date & Time"; }
+    #auth-logs td:nth-of-type(2):before { content: "User"; }
+    #auth-logs td:nth-of-type(3):before { content: "Location"; }
+    #auth-logs td:nth-of-type(4):before { content: "Status"; }
+    #auth-logs td:nth-of-type(5):before { content: "Details"; }
+
+    /* Better filter controls for mobile */
+    .filter-controls {
+        flex-direction: column;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .search-box {
+        width: 100%;
+    }
+    
+    .date-filter {
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    .date-filter input {
+        flex: 1;
+        min-width: 120px;
+    }
+    
+    #filter-button {
+        width: 100%;
+        margin-top: 10px;
+    }
+    
+    /* Better button styling for mobile */
+    .btn.delete-btn {
+        width: 100%;
+        padding: 10px;
+        margin-top: 5px;
+        background-color: var(--accent-color);
+        color: white;
+        border: none;
+        border-radius: 4px;
+    }
+    
+    #log-table-body tr td[colspan="6"] {
+        padding: 30px 12px;
+        text-align: center;
+    }
+    
+    #log-table-body tr.no-logs td:before {
+        content: none;
+    }
+    
+    #log-table-body tr.no-logs td {
+        padding-left: 12px;
+    }
+}
+
+/* Fix notifications on mobile */
+@media (max-width: 480px) {
+    .notification {
+        width: 100%;
+        margin-bottom: 10px;
+        padding: 10px;
+    }
 }

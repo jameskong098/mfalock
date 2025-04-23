@@ -9,6 +9,28 @@ function formatDate(date) {
 let socket;
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Mobile menu toggle functionality
+    const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+    const mobileMenu = document.getElementById('mobile-menu');
+    
+    if (mobileMenuToggle && mobileMenu) {
+        mobileMenuToggle.addEventListener('click', function() {
+            mobileMenu.classList.toggle('open');
+            mobileMenuToggle.querySelector('i').classList.toggle('fa-bars');
+            mobileMenuToggle.querySelector('i').classList.toggle('fa-times');
+        });
+        
+        // Close menu when clicking on a link
+        const menuLinks = mobileMenu.querySelectorAll('a');
+        menuLinks.forEach(link => {
+            link.addEventListener('click', function() {
+                mobileMenu.classList.remove('open');
+                mobileMenuToggle.querySelector('i').classList.add('fa-bars');
+                mobileMenuToggle.querySelector('i').classList.remove('fa-times');
+            });
+        });
+    }
+    
     // Setup WebSocket connection if SocketIO is available
     if (typeof io !== 'undefined') {
         socket = io.connect(window.location.origin);

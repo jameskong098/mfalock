@@ -11,20 +11,23 @@ Author: Omorogieva Ogieva
 Date: February 27, 2025
 """
 
+import os
 from vosk import Model, KaldiRecognizer
-from audio.utils.random_utils import gen_phrase
+from random_utils import gen_phrase
 import pyaudio
 import json
 
 
-# Load the Vosk Model (Ensure "vosk_model" folder is in the same directory)
-model = Model("vosk_model")
+# Load the Vosk Model
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+model_path = os.path.join(parent_dir, "vosk_model")
+model = Model(model_path)
 recognizer = KaldiRecognizer(model, 16000)
 
 # Initialize PyAudio
 audio = pyaudio.PyAudio()
 
-# Find the correct microphone index (useful for ReSpeaker Mic Array)
+# Find the correct microphone index
 mic_index = None
 for i in range(audio.get_device_count()):
     info = audio.get_device_info_by_index(i)
@@ -49,7 +52,7 @@ try:
             text = result.get("text", "")  # Extract recognized text
             if text:
                 print(f"You said: {text}")
-                if text == phrase:
+                if text.lower() == phrase.lower():
                     print("Correct... Opening!!!")
 except KeyboardInterrupt:
     print(" Stopping...")
