@@ -6,6 +6,12 @@ import numpy as np
 known_image = face_recognition.load_image_file("yunus2.jpg")
 known_encoding = face_recognition.face_encodings(known_image)[0]
 
+lines =[]
+# Read file line by line
+with open("faces/imagelist.txt", "r") as file:
+    lines = file.readlines()  # reads all lines into a list
+
+
 picam2 = Picamera2()
 picam2.configure(picam2.create_preview_configuration(main={"size": (640, 480)}))
 picam2.start()
