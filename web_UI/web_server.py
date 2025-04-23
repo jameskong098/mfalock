@@ -519,35 +519,47 @@ def upload_file():
         os.makedirs(upload_folder, exist_ok=True)  # Ensure the upload folder exists
         image_path = os.path.join(upload_folder, file.filename)
         file.save(image_path)
-        logger.info(f"Image saved locally at: {image_path}")
+
+    filename_log = os.path.join('camera','faces', 'imagelist.txt')
+    with open(filename_log, 'a') as f:
+        f.write(file.filename + '\n')
+
+    logger.info(f"Image saved locally at: {image_path}")
         
-        try:
-            # Define remote path on the Raspberry Pi
-            raspberry_pi_ip = '172.20.231.165'
-            username = 'yunus'
-            password = 'yunus'
-            remote_path = f'/home/yunus/fac-rec-env/{file.filename}'
+    try:
+        # Define remote path on the Raspberry Pi
+        raspberry_pi_ip = '172.20.231.165'
+        username = 'yunus'
+        password = 'yunus'
+        remote_path = f'/home/yunus/fac-rec-env/{file.filename}'
+
+        remote_list_path = f'/home/yunus/fac-rec-env/imagelist.txt'
+
+        
+        # Transfer the image directly to the Raspberry Pi
+        transfer_status, message = transfer_file_to_pi(image_path, remote_path, raspberry_pi_ip, username, password)
+        list_transfer_status, list_message = transfer_file_to_pi(filename_log, remote_list_path, raspberry_pi_ip, username, password)
+
+        
+        if transfer_status and list_transfer_status:
+            logger.info("Image transfer successful")
+            return jsonify({
+                'status': 'success', 
+                'message': 'Image and image list uploaded and transferred successfully',
+                'path': image_path
+            })
+        else:
+            logger.error(f"Image transfer failed: {message}, {list_message}")
+            return jsonify({
+                'status': 'partial_success', 
+                'message': f'Image uploaded locally but transfer failed: {message}, {list_message}',
+                'path': image_path
+            }), 207
             
-            # Transfer the image directly to the Raspberry Pi
-            transfer_status, message = transfer_file_to_pi(image_path, remote_path, raspberry_pi_ip, username, password)
-            
-            if transfer_status:
-                logger.info("Image transfer successful")
-                return jsonify({
-                    'status': 'success', 
-                    'message': 'Image uploaded and transferred successfully',
-                    'path': image_path
-                })
-            else:
-                logger.error(f"Image transfer failed: {message}")
-                return jsonify({
-                    'status': 'partial_success', 
-                    'message': f'Image uploaded locally but transfer failed: {message}',
-                    'path': image_path
-                }), 207
-        except Exception as e:
-            logger.error(f"Error during image upload process: {e}")
-            return jsonify({'status': 'error', 'message': f'Failed to process image: {str(e)}'}), 500
+
+    except Exception as e:
+        logger.error(f"Error during image upload process: {e}")
+        return jsonify({'status': 'error', 'message': f'Failed to process image: {str(e)}'}), 500
 
 
 # Function to transfer a file to the Raspberry Pi via SSH/SFTP
