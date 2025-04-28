@@ -95,7 +95,7 @@ def check_and_copy_servo_files():
     Check and copy servo.py to the Pico using mpremote.
     Always copies the latest version.
     """
-    servo_py_src = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "servo_motor", "servo.py")
+    servo_py_src = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "pico_sensors", "servo_motor", "servo.py")
     servo_py_dst = ":servo.py"
 
     if not os.path.exists(servo_py_src):
