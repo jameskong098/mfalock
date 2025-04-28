@@ -10,6 +10,7 @@
             <div class="form-group">
                 <label for="picture-upload">Upload Image for Face Recognition</label>
                 <p class="help-text">Image must clearly show your full face.</p>
+                <div id="face-carousel" class="face_carousel"></div>
                 <input type="file" id="picture-upload" name="picture" accept="image/*" required class="form-control">
                 <button type="submit" class="btn primary mt-2">Upload Image</button>
             </div>
@@ -89,4 +90,5 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/settings.js') }}"></script>
+<script src="{{ url_for('static', filename='js/face_carousel.js') }}"></script>
 {% endblock %}

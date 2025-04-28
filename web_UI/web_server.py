@@ -22,7 +22,7 @@ import subprocess
 import pickle
 import paramiko
 from datetime import datetime
-from flask import Flask, render_template, jsonify, request, send_from_directory
+from flask import Flask, render_template, jsonify, request, send_from_directory, send_file
 from flask_socketio import SocketIO, emit
 import uuid
 import tempfile
@@ -510,10 +510,48 @@ def handle_settings():
         except Exception as e:
             logger.error(f"Error handling settings: {e}")
             return jsonify({'status': 'error', 'message': str(e)}), 500
-        
+
+#remove removed files from approved.txt
+@app.route('/api/remove-face', methods=['POST'])
+def remove_face():
+    data = request.get_json()
+    filename = data.get('filename')
+    approved_file = 'camera/faces/imagelist.txt'
+    face_path = os.path.join('static/faces', filename)
+
+    # Remove from approved.txt
+    with open(approved_file, 'r') as f:
+        lines = f.readlines()
+    with open(approved_file, 'w') as f:
+        for line in lines:
+            if line.strip() != filename:
+                f.write(line)
+
+    # Optionally delete the image
+    try:
+        os.remove(face_path)
+    except Exception as e:
+        print(f"Warning: could not delete image file: {e}")
+
+    return jsonify({'status': 'success', 'removed': filename})
+
+#get lsit of approved faces 
+@app.route('/api/approved-faces')
+def get_approved_faces():
+    with open('camera/faces/imagelist.txt', 'r') as f:
+        lines = [line.strip() for line in f if line.strip()]
+    return jsonify(lines)
+
+# Allows browser to acces images
+@app.route('/camera/faces/<path:filename>')
+def serve_face_image(filename):
+    # Full absolute path
+    full_path = os.path.join(os.getcwd(), 'camera', 'faces', filename)
+    return send_file(full_path)
+
 #blacklist images upload 
 @app.route('/blacklist', methods=['POST'])
-def upload_file():
+def upload_blacklist():
     if 'picture' not in request.files:
         return jsonify({'status': 'error', 'message': 'No file part'}), 400
     file = request.files['picture']
@@ -534,7 +572,7 @@ def upload_file():
 
 # Route to handle approved  image uploads
 @app.route('/upload', methods=['POST'])
-def upload_file():
+def upload_approved():
     if 'picture' not in request.files:
         return jsonify({'status': 'error', 'message': 'No file part'}), 400
     file = request.files['picture']

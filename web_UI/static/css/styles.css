@@ -1606,3 +1606,35 @@ tr:hover {
         align-items: center;
     }
 }
+/* css for face carousels */
+.face_carousel {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 10px;
+  }
+  
+  .face_card {
+    position: relative;
+    display: inline-block;
+  }
+  
+  .face_card img {
+    height: 120px;
+    border-radius: 5px;
+  }
+  
+  .face_delete-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background-color: red;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  
