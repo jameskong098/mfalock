@@ -4,21 +4,23 @@ This directory contains the `listener.py` script, which runs on a separate Raspb
 
 ## Purpose
 
-The `listener.py` script acts as a simple TCP server. It listens on a specified port for incoming connections. When the main web server (`web_server.py`) processes an authentication attempt (either success or failure), it sends a message ("SUCCESS" or "FAILURE") to this listener service.
+The `listener.py` script acts as a simple TCP server. It listens on a specified port for incoming connections from the main web server (`web_server.py`). When the web server processes an authentication attempt (either success or failure), it sends a message ("SUCCESS" or "FAILURE") to this listener service.
 
-- The listener now automatically communicates with the Raspberry Pi Pico running `servo_lock.py` via serial (USB).
-- When a "SUCCESS" message is received, the listener sends an `unlock` command to the Pico, waits 5 seconds, then sends a `lock` command to re-lock the servo.
-- The Pico must be running `servo_lock.py` and connected via USB (usually `/dev/ttyACM0`).
+- The listener automatically copies the necessary `servo.py` file to the connected Raspberry Pi Pico using `mpremote`.
+- It then uses `mpremote exec` to directly execute commands on the Pico to control the servo motor via the copied `servo.py`.
+- When a "SUCCESS" message is received, the listener executes code on the Pico to unlock the servo, waits for a configured delay, then executes code to re-lock the servo.
+- The Pico must be connected via USB for `mpremote` to function.
 
 The `handle_message` function within `listener.py` implements these actions. For example:
-- **On "SUCCESS":** Sends `unlock` to the Pico, waits, then sends `lock`.
+- **On "SUCCESS":** Executes unlock code on the Pico, waits, then executes lock code.
 - **On "FAILURE":** (No servo action by default, but you can add your own logic.)
 
 ## Configuration
 
 - **`LISTENER_HOST`**: Set to `'0.0.0.0'` to listen on all available network interfaces on the device running the listener.
 - **`LISTENER_PORT`**: The port number the listener server will bind to. This **must** match the `LISTENER_PI_PORT` configured in `web_server.py`. The default is `8080`.
-- **`/dev/ttyACM0`**: The default serial port for the Pico. Change this in `listener.py` if your Pico appears on a different port.
+- **`ALLOWED_WEB_SERVER_IP`**: The IP address of the main web server Pi. The listener will *only* accept connections from this IP address. This **must** be configured correctly in `listener.py`.
+- **`UNLOCK_TO_LOCK_DELAY`**: The time in seconds the listener waits after unlocking before sending the lock command. Default is 3 seconds.
 
 ## Finding the Listener Pi's IP Address
 
@@ -49,9 +51,10 @@ Once you have the IP address of the device running the listener, you **must** up
 # In web_server.py
 # ...
 LISTENER_PI_IP = "YOUR_LISTENER_PI_IP_ADDRESS" # Replace with the actual IP
-LISTENER_PI_PORT = 8080
+LISTENER_PI_PORT = 8080 # Must match LISTENER_PORT in listener.py
 # ...
 ```
+You also need to ensure the `ALLOWED_WEB_SERVER_IP` in `listener.py` matches the IP address of the Pi running `web_server.py`.
 
 ## Pico Setup
 
@@ -60,14 +63,42 @@ LISTENER_PI_PORT = 8080
 
 ## Running the Listener
 
-1.  Ensure Python 3 and the `pyserial` package are installed:
+1.  Ensure Python 3 is installed on the listener Pi.
+2.  Install necessary Python packages:
     ```bash
-    pip install pyserial
+    pip install pyserial # Required by mpremote
     ```
-2.  Connect the Pico to the Pi via USB and ensure `servo_lock.py` is running on the Pico.
-3.  Navigate to the `listener` directory in a terminal.
-4.  Run the script:
+3.  Install `mpremote` if you haven't already:
+    ```bash
+    pip install mpremote
+    ```
+4.  Connect the Pico to the listener Pi via USB.
+5.  Navigate to the `listener` directory in a terminal.
+6.  Run the script:
     ```bash
     python listener.py
     ```
-5.  The script will log messages to the console, including serial communication with the Pico. Keep this script running in the background (e.g., using `screen`, `tmux`, or as a systemd service) for the system to function correctly.
+7.  The script will first attempt to copy `servo.py` from the project's `servo_motor` directory to the Pico. It will then start listening for connections and log messages to the console, including `mpremote` communication attempts with the Pico. Keep this script running in the background (e.g., using `screen`, `tmux`, or as a systemd service) for the system to function correctly.
+
+## Testing the Listener (`send_test_msg.py`)
+
+The `send_test_msg.py` script is provided for testing the listener service independently.
+
+**Purpose:**
+
+-   Allows you to manually send a "SUCCESS" message to the running `listener.py` service.
+-   Useful for verifying that the listener is running, accepting connections, and triggering the servo unlock/lock sequence correctly via `mpremote` without needing the full web server to be operational.
+
+**How to Use:**
+
+1.  **Ensure `listener.py` is running** on its designated Pi and configured correctly (especially `ALLOWED_WEB_SERVER_IP`).
+2.  **Open `send_test_msg.py`** in a text editor.
+3.  **Modify the `HOST` variable** in `send_test_msg.py` to match the IP address of the Pi running `listener.py`.
+4.  **Important:** The IP address of the machine *running* `send_test_msg.py` **must** be the IP address listed in the `ALLOWED_WEB_SERVER_IP` setting within `listener.py`. If you are testing from a different machine than the actual web server, you might need to temporarily update `ALLOWED_WEB_SERVER_IP` in `listener.py` to the IP of your testing machine.
+5.  **Navigate to the `listener` directory** in a terminal on the machine where you edited `send_test_msg.py`.
+6.  **Run the script:**
+    ```bash
+    python send_test_msg.py
+    ```
+7.  Press Enter when prompted. This will send the "SUCCESS" message.
+8.  Observe the console output of `listener.py` and check if the servo performs the unlock and re-lock actions as expected.
