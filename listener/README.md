@@ -6,7 +6,6 @@ This directory contains the `listener.py` script, which runs on a separate Raspb
 
 The `listener.py` script acts as a simple TCP server. It listens on a specified port for incoming connections. When the main web server (`web_server.py`) processes an authentication attempt (either success or failure), it sends a message ("SUCCESS" or "FAILURE") to this listener service.
 
-**New in this version:**
 - The listener now automatically communicates with the Raspberry Pi Pico running `servo_lock.py` via serial (USB).
 - When a "SUCCESS" message is received, the listener sends an `unlock` command to the Pico, waits 5 seconds, then sends a `lock` command to re-lock the servo.
 - The Pico must be running `servo_lock.py` and connected via USB (usually `/dev/ttyACM0`).
