@@ -13,7 +13,6 @@ import socket
 import logging
 import sys
 import serial
-import subprocess
 
 # Configure logging
 logging.basicConfig(

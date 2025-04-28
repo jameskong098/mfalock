@@ -6,14 +6,20 @@ This directory contains the `listener.py` script, which runs on a separate Raspb
 
 The `listener.py` script acts as a simple TCP server. It listens on a specified port for incoming connections. When the main web server (`web_server.py`) processes an authentication attempt (either success or failure), it sends a message ("SUCCESS" or "FAILURE") to this listener service.
 
-The `handle_message` function within `listener.py` is where you should implement the actions to be taken based on the received message. For example:
-- **On "SUCCESS":** Activate a servo motor to unlock a door, turn on a green LED, etc.
-- **On "FAILURE":** Log the attempt, flash a red LED, trigger an alert, etc.
+**New in this version:**
+- The listener now automatically communicates with the Raspberry Pi Pico running `servo_lock.py` via serial (USB).
+- When a "SUCCESS" message is received, the listener sends an `unlock` command to the Pico, waits 5 seconds, then sends a `lock` command to re-lock the servo.
+- The Pico must be running `servo_lock.py` and connected via USB (usually `/dev/ttyACM0`).
+
+The `handle_message` function within `listener.py` implements these actions. For example:
+- **On "SUCCESS":** Sends `unlock` to the Pico, waits, then sends `lock`.
+- **On "FAILURE":** (No servo action by default, but you can add your own logic.)
 
 ## Configuration
 
 - **`LISTENER_HOST`**: Set to `'0.0.0.0'` to listen on all available network interfaces on the device running the listener.
 - **`LISTENER_PORT`**: The port number the listener server will bind to. This **must** match the `LISTENER_PI_PORT` configured in `web_server.py`. The default is `8080`.
+- **`/dev/ttyACM0`**: The default serial port for the Pico. Change this in `listener.py` if your Pico appears on a different port.
 
 ## Finding the Listener Pi's IP Address
 
@@ -48,12 +54,21 @@ LISTENER_PI_PORT = 8080
 # ...
 ```
 
+## Pico Setup
+
+- Flash or run `servo_lock.py` on your Pico. It will listen for `lock` and `unlock` commands over USB serial.
+- The Pico should be connected to the listener Pi via USB before starting the listener.
+
 ## Running the Listener
 
-1.  Ensure Python 3 is installed on the device.
-2.  Navigate to the `listener` directory in a terminal.
-3.  Run the script:
+1.  Ensure Python 3 and the `pyserial` package are installed:
+    ```bash
+    pip install pyserial
+    ```
+2.  Connect the Pico to the Pi via USB and ensure `servo_lock.py` is running on the Pico.
+3.  Navigate to the `listener` directory in a terminal.
+4.  Run the script:
     ```bash
     python listener.py
     ```
-4.  The script will log messages to the console, indicating when it starts, receives connections, and processes messages. Keep this script running in the background (e.g., using `screen`, `tmux`, or as a systemd service) for the system to function correctly.
+5.  The script will log messages to the console, including serial communication with the Pico. Keep this script running in the background (e.g., using `screen`, `tmux`, or as a systemd service) for the system to function correctly.
