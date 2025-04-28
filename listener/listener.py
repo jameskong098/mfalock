@@ -1,3 +1,13 @@
+"""
+ListenerPi - TCP Listener for Authentication Events
+
+This script listens for success or failure messages from a web server running on a Raspberry Pi. This program is also 
+designed to be run on a Raspberry Pi.
+It processes the messages and moves the servo to unlock the lock accordingly.
+
+Author: James Kong
+"""
+
 import time
 import socket
 import logging
@@ -72,11 +82,10 @@ def start_listener_server():
 
             except socket.error as e:
                 logger.error(f"Error accepting connection: {e}")
-                # Optional: add a small delay before retrying to accept
                 time.sleep(1)
             except KeyboardInterrupt:
                 logger.info("Keyboard interrupt received. Shutting down...")
-                break # Exit the loop cleanly
+                break 
 
     except socket.error as e:
         logger.error(f"Failed to bind or listen on {LISTENER_HOST}:{LISTENER_PORT}: {e}")

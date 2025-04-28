@@ -278,10 +278,8 @@ function addEventToList(event) {
 
 // Function to update UI based on the current sensor mode
 function updateSensorModeUI(mode) {
-    // Update authentication method buttons/displays
     const touchMethodElem = document.getElementById('touch-method');
     const rotaryMethodElem = document.getElementById('rotary-method');
-    
     if (touchMethodElem && rotaryMethodElem) {
         if (mode === 'touch') {
             touchMethodElem.classList.add('active');
@@ -293,10 +291,11 @@ function updateSensorModeUI(mode) {
             rotaryMethodElem.classList.add('active');
             document.querySelectorAll('.touch-instructions').forEach(el => el.style.display = 'none');
             document.querySelectorAll('.rotary-instructions').forEach(el => el.style.display = 'block');
+        } else {
+            touchMethodElem.classList.remove('active');
+            rotaryMethodElem.classList.remove('active');
         }
     }
-    
-    // Update any other UI elements that should change based on sensor mode
     const sensorModeIndicator = document.getElementById('current-sensor-mode');
     if (sensorModeIndicator) {
         sensorModeIndicator.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);

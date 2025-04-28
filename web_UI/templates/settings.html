@@ -2,108 +2,89 @@
 
 {% block content %}
 <section id="settings">
-    <div class="card">
-        <h2 class="section-title">System Settings</h2>
-        
+    <h2 class="section-title">System Settings</h2>
+
+    <!-- Face Recognition Card -->
+    <div class="card settings-section">
+        <h3>Face Recognition</h3>
         <form id="upload-form" action="/upload" method="POST" enctype="multipart/form-data">
             <div class="form-group">
-              <label for="security-level">Upload Image for Face Recognition</label>
-              <p>Image must have your full face</p>
-              <input type="file" name="picture" accept="image/*" required>
-              <button type="submit">Upload</button>
+                <label for="picture-upload">Upload Image for Face Recognition</label>
+                <p class="help-text">Image must clearly show your full face.</p>
+                <input type="file" id="picture-upload" name="picture" accept="image/*" required class="form-control">
+                <button type="submit" class="btn primary mt-2">Upload Image</button>
             </div>
-          </form>
-          
-        <form id="settings-form">
-            <div class="form-group">
-                <label for="security-level">Security Level</label>
-                <select id="security-level" name="security-level">
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high" selected>High</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label for="notification-email">Notification Email</label>
-                <input type="email" id="notification-email" name="notification-email" placeholder="Enter email for notifications">
-            </div>
-            
-            <div class="form-group">
-                <label>Notification Settings</label>
-                <div class="checkbox-group">
-                    <input type="checkbox" id="notify-success" name="notify-success">
-                    <label for="notify-success">Notify on successful access</label>
-                </div>
-                <div class="checkbox-group">
-                    <input type="checkbox" id="notify-failure" name="notify-failure" checked>
-                    <label for="notify-failure">Notify on failed attempts</label>
-                </div>
-            </div>
+        </form>
+    </div>
 
-
+    <!-- Audio Phrase Settings Card -->
+    <div class="card settings-section">
+        <h3>Audio Phrase Settings</h3>
+        <form id="audio-settings-form">
             <div class="form-group">
-                <label>Audio Phrase Settings</label>
                 <div id="phrase-generation">
                     <label for="custom-words">Custom Words (comma-separated)</label>
                     <input type="text" id="custom-words" class="form-control" placeholder="e.g. lock,door,entry,secure">
                     <label for="phrase-length" class="mt-2">Phrase Length</label>
                     <input type="number" id="phrase-length" class="form-control" value="5" min="1" max="15">
 
-                    <button class="btn btn-primary mt-3" onclick="generatePhrase()">Generate Phrase</button>
+                    <button type="button" class="btn primary mt-3" onclick="generatePhrase()">Generate Phrase</button>
                     <div class="mt-3">
                         <strong>Generated Phrase:</strong>
                         <p id="generated-phrase" style="font-weight: bold;"></p>
                     </div>
                 </div>
             </div>
+        </form>
+    </div>
 
-            <div class="form-group">
-                <label>Custom Unlock Pattern</label>
-                
+    <!-- Custom Unlock Pattern Card -->
+    <div class="card settings-section">
+        <h3>Custom Unlock Pattern</h3>
+        <form id="pattern-settings-form">
+             <div class="form-group">
                 <div id="pattern-recorder">
                     <div id="pattern-sensor">
                         <div class="sensor-circle"></div>
                         <p>Tap or hold here to record your pattern</p>
                     </div>
-                    
+
                     <div class="pattern-controls">
                         <button type="button" id="record-pattern" class="btn">Start Recording</button>
                         <button type="button" id="clear-pattern" class="btn">Clear Pattern</button>
                     </div>
-                    
+
                     <div id="pattern-steps-container">
                         <h4>Current Pattern:</h4>
-                        <div id="pattern-steps"></div>
+                        <div id="pattern-steps" class="empty-pattern">No pattern recorded yet.</div>
                     </div>
                 </div>
-                
+
                 <div class="manual-pattern-toggle">
                     <button type="button" id="toggle-manual-entry" class="btn small">Manual Entry</button>
                 </div>
-                
+
                 <div id="manual-pattern-container" style="display: none;">
                     <div id="pattern-container">
-                        <div class="pattern-step" data-index="0">
-                            <select class="pattern-action">
-                                <option value="tap">Tap</option>
-                                <option value="hold">Hold</option>
-                            </select>
-                            <input type="number" class="pattern-duration" min="0" max="5000" step="100" value="0" placeholder="Duration (ms)">
-                            <button type="button" class="btn small remove-step">Remove</button>
-                        </div>
+                        <!-- Manual steps will be added here by JS -->
                     </div>
                     <div class="pattern-controls">
                         <button type="button" id="add-step" class="btn small">Add Step</button>
                     </div>
                 </div>
-                
+
                 <p class="help-text">Create your custom pattern with taps and holds. A secure pattern should have at least 3 steps.</p>
             </div>
-            
-            <button type="submit" class="btn primary">Save Settings</button>
         </form>
     </div>
+
+    <!-- Global Save Button Card -->
+    <div class="card settings-section">
+         <form id="settings-form"> <!-- Assuming one form submits all settings -->
+            <button type="submit" class="btn primary">Save All Settings</button>
+         </form>
+    </div>
+
 </section>
 {% endblock %}
 
