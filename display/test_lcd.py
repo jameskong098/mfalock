@@ -3,6 +3,7 @@ from displayhatmini import DisplayHATMini
 from PIL import Image, ImageDraw, ImageFont
 import time
 import os
+import subprocess
 
 # Display setup
 width = DisplayHATMini.WIDTH
@@ -155,6 +156,30 @@ def draw_error_screen(error_message):
     display.display()
     time.sleep(1)  # Display error for 1 second
 
+def draw_facial_recognition_screen():
+    """
+    shows a loading screen for facial recognition.
+    """
+    draw.rectangle((0, 0, width, height), fill=(0, 0, 0))
+    draw.text((20, 20), "Starting Facial Recognition...", font=font, fill=(0, 255, 255))
+    draw.text((10, height - 20), "Press Y to Cancel", font=font, fill=(180, 180, 180))
+    display.display()
+def draw_facial_recognition_error_screen():
+    """
+    shows an error screen for facial recognition.
+    """
+    draw.rectangle((0, 0, width, height), fill=(0, 0, 0))
+    draw.text((20, 20), "Facial Recognition Failed", font=font, fill=(255, 0, 0))
+    draw.text((10, height - 20), "Press Y to Return", font=font, fill=(180, 180, 180))
+    display.display()
+def draw_facial_recognition_success_screen():
+    """
+    shows a success screen for facial recognition.
+    """
+    draw.rectangle((0, 0, width, height), fill=(0, 0, 0))
+    draw.text((20, 20), "Facial Recognition Successful", font=font, fill=(0, 255, 0))
+    draw.text((10, height - 20), "Press Y to Return", font=font, fill=(180, 180, 180))
+    display.display()
 
 # Set backlight
 display.set_led(0.05, 0.05, 0.05)
@@ -182,6 +207,13 @@ while True:
             elif selected == "Keypad Authentication":
                 current_screen = "keypad"
                 draw_keypad_screen()
+            elif selected == "Facial Recognition":
+                current_screen = "facial_recognition"
+
+                try:
+                    subprocess.Popen(["python3", "/path/to/your/facialrecognition.py"])
+                except Exception as e:
+                    print("Failed to start facial recognition:", e)
             time.sleep(0.2)
 
     elif current_screen == "lock":
@@ -304,5 +336,5 @@ while True:
                 current_screen = "set_password"
                 draw_set_password_screen()
             time.sleep(0.2)
-
+    
     time.sleep(0.05)
