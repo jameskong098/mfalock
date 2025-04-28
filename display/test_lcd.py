@@ -209,7 +209,7 @@ while True:
                 draw_keypad_screen()
             elif selected == "Facial Recognition":
                 current_screen = "facial_recognition"
-
+                draw_facial_recognition_screen()
                 try:
                     subprocess.Popen(["python3", "/path/to/your/facialrecognition.py"])
                 except Exception as e:
@@ -336,5 +336,14 @@ while True:
                 current_screen = "set_password"
                 draw_set_password_screen()
             time.sleep(0.2)
-    
+    elif current_screen == "facial_recognition":
+        if display.read_button(display.BUTTON_Y):
+            # Cancel facial recognition
+            try:
+                subprocess.Popen(["pkill", "-f", "/path/to/your/facialrecognition.py"])
+            except Exception as e:
+                print("Failed to stop facial recognition:", e)
+            current_screen = "home"
+            draw_home_screen()
+            time.sleep(0.2)
     time.sleep(0.05)
