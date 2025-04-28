@@ -450,14 +450,7 @@ document.addEventListener('DOMContentLoaded', function() {
             colorSequence = ['red', 'blue', 'green', 'yellow'];
         }
 
-        // Save color sequence to localStorage as well for immediate use in dashboard
-        localStorage.setItem('colorSequencePassword', JSON.stringify(colorSequence));
-        
         const formData = {
-            securityLevel: document.getElementById('security-level')?.value || 'high',
-            notificationEmail: document.getElementById('notification-email')?.value || '',
-            notifySuccess: document.getElementById('notify-success')?.checked || false,
-            notifyFailure: document.getElementById('notify-failure')?.checked || true,
             customPattern: formPatternSteps,
             colorSequence: colorSequence
         };

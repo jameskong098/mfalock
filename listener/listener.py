@@ -28,8 +28,6 @@ logger = logging.getLogger("ListenerPi")
 LISTENER_HOST = '0.0.0.0'  # Listen on all available network interfaces
 LISTENER_PORT = 8080     # Port to listen on (must match web_server.py)
 ALLOWED_WEB_SERVER_IP = "172.20.102.83" # IP of the web_server Pi
-SERIAL_PORT = "/dev/ttyACM0"  # Serial port for Pico on Raspberry Pi
-#SERIAL_PORT = "/dev/tty.usbmodem11201" # Serial port for Pico on Mac (debugging)
 UNLOCK_TO_LOCK_DELAY = 3  # Delay in seconds between unlock and lock commands
 # ---------------------
 
