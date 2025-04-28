@@ -19,8 +19,8 @@ def detect_known_face(image_list_path="imagelist.txt", blacklist_path="blacklist
     # Load known faces from the list
     known_encodings = []
     known_names = []
-    blacklist_encodings = []
-    blacklist_names = []
+    # blacklist_encodings = []
+    # blacklist_names = []
     
     # Get the directory of the image list file
     base_dir = os.path.dirname(os.path.abspath(image_list_path))
@@ -48,26 +48,26 @@ def detect_known_face(image_list_path="imagelist.txt", blacklist_path="blacklist
             print(f"File not found: {img_path}")
     
     # Load blacklisted faces
-    if os.path.exists(blacklist_path):
-        with open(blacklist_path, 'r') as file:
-            blacklist_files = [line.strip() for line in file.readlines()]
+    # if os.path.exists(blacklist_path):
+    #     with open(blacklist_path, 'r') as file:
+    #         blacklist_files = [line.strip() for line in file.readlines()]
             
-        for img_file in blacklist_files:
-            img_path = os.path.join(base_dir, img_file)
-            if os.path.exists(img_path):
-                try:
-                    blacklist_image = face_recognition.load_image_file(img_path)
-                    encodings = face_recognition.face_encodings(blacklist_image)
-                    if encodings:
-                        blacklist_encodings.append(encodings[0])
-                        blacklist_names.append(img_file)
-                        print(f"Loaded blacklist encoding for {img_file}")
-                    else:
-                        print(f"No face found in blacklisted {img_file}")
-                except Exception as e:
-                    print(f"Error loading blacklisted {img_file}: {str(e)}")
-            else:
-                print(f"Blacklist file not found: {img_path}")
+    #     for img_file in blacklist_files:
+    #         img_path = os.path.join(base_dir, img_file)
+    #         if os.path.exists(img_path):
+    #             try:
+    #                 blacklist_image = face_recognition.load_image_file(img_path)
+    #                 encodings = face_recognition.face_encodings(blacklist_image)
+    #                 if encodings:
+    #                     blacklist_encodings.append(encodings[0])
+    #                     blacklist_names.append(img_file)
+    #                     print(f"Loaded blacklist encoding for {img_file}")
+    #                 else:
+    #                     print(f"No face found in blacklisted {img_file}")
+    #             except Exception as e:
+    #                 print(f"Error loading blacklisted {img_file}: {str(e)}")
+    #         else:
+    #             print(f"Blacklist file not found: {img_path}")
     
     if not known_encodings:
         print("No valid face encodings could be loaded.")
@@ -94,13 +94,13 @@ def detect_known_face(image_list_path="imagelist.txt", blacklist_path="blacklist
             # Check if any face matches the known faces or blacklisted faces
             for face_encoding in face_encodings:
                 # First check if face is blacklisted
-                if blacklist_encodings:
-                    blacklist_matches = face_recognition.compare_faces(blacklist_encodings, face_encoding)
-                    if True in blacklist_matches:
-                        picam2.stop()
-                        index = blacklist_matches.index(True)
-                        print(f"Matched with blacklisted face: {blacklist_names[index]}")
-                        return False
+                # if blacklist_encodings:
+                #     blacklist_matches = face_recognition.compare_faces(blacklist_encodings, face_encoding)
+                #     if True in blacklist_matches:
+                #         picam2.stop()
+                #         index = blacklist_matches.index(True)
+                #         print(f"Matched with blacklisted face: {blacklist_names[index]}")
+                #         return False
                 
                 # Then check allowed faces
                 allowed_matches = face_recognition.compare_faces(known_encodings, face_encoding)
@@ -119,8 +119,8 @@ def detect_known_face(image_list_path="imagelist.txt", blacklist_path="blacklist
 if __name__ == "__main__":
     result = detect_known_face()
     if result is True:
-        print("Known face detected - access granted")
+        print("SUCCESS")
     elif result is False:
-        print("Blacklisted face detected - access denied")
+        print("FAILURE")
     else:
-        print("No recognized face detected")
+        print("TIMEOUT")
