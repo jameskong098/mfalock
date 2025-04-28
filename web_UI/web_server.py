@@ -41,7 +41,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'mfalock-secret-key!'
 socketio = SocketIO(app)
 
-LISTENER_PI_IP = "YOUR_LISTENER_PI_IP_ADDRESS" # Replace with the actual IP
+LISTENER_PI_IP = "192.168.1.36" # Replace with the actual IP
 LISTENER_PI_PORT = 8080
 
 # Global variables
