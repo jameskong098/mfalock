@@ -14,11 +14,13 @@ Date: February 27, 2025
 import os
 from vosk import Model, KaldiRecognizer
 from random_utils import gen_phrase
-import pyaudio
 import json
 import time
 import logging
-from datetime import datetime
+import sounddevice as sd
+import numpy as np
+assert np
+import queue
 
 
 # Load the Vosk Model and configure logging
@@ -32,45 +34,57 @@ model_path = os.path.join(parent_dir, "vosk_model")
 model = Model(model_path)
 recognizer = KaldiRecognizer(model, 16000)
 
-# Initialize PyAudio
-audio = pyaudio.PyAudio()
+# Initialize Parameters
+samplerate = 16000
+blocksize = 4096
+channels = 1
+dtype = 'int16'
+timeout = 30  # seconds
+q = queue.Queue()
 
-# Find the correct microphone index
-mic_index = None
-for i in range(audio.get_device_count()):
-    info = audio.get_device_info_by_index(i)
-    if "ReSpeaker" in info["name"]:  # Change if using another mic
-        mic_index = i
-        break
+def audio_callback(indata, frames, time, status):
+    if status:
+        logging.warning(f"Status: {status}")
+    q.put(indata.copy())
 
-# Open Audio Stream (Use `mic_index` if needed)
-stream = audio.open(format=pyaudio.paInt16, channels=1, rate=16000,
-                    input=True, frames_per_buffer=4096, input_device_index=mic_index)
-stream.start_stream()
+# Start stream
+stream = sd.InputStream(
+    samplerate=samplerate,
+    channels=channels,
+    blocksize=blocksize,
+    dtype=dtype,
+    callback=audio_callback
+)
+
 
 try:
+    stream.start()
     phrase = gen_phrase(5)
     print(f"Listening... Say this phrase: {phrase}!")
+    print(sd.query_devices())
     start_time = time.time()
-    timeout = 30  # seconds
     while True:
         if time.time() - start_time > timeout:
             print("Timeout reached. Try again.")
-            logging.info("Authentication SUCCESSFUL.")
+            logging.info("Authentication TIMED OUT.")
             break
-        data = stream.read(4096, exception_on_overflow=False)
-        if recognizer.AcceptWaveform(data):
-            result = json.loads(recognizer.Result())  # Convert JSON output to dict
-            text = result.get("text", "")  # Extract recognized text
-            if text:
-                print(f"You said: {text}")
-                logging.info(f"Recognized: '{text}'")
-                if text.lower() == phrase.lower():
-                    print("Correct... Opening!!!")
-                    logging.info("Authentication SUCCESSFUL.")
-                    break
-        else:
-            print("Could not recognize speech. Try again.")
+
+        try:
+            data = q.get(timeout=1)
+            if recognizer.AcceptWaveform(data.tobytes()):
+                result = json.loads(recognizer.Result())  # Convert JSON output to dict
+                text = result.get("text", "")  # Extract recognized text
+                if text:
+                    print(f"You said: {text}")
+                    logging.info(f"Recognized: '{text}'")
+                    if text.lower() == phrase.lower():
+                        print("Correct... Opening!!!")
+                        logging.info("Authentication SUCCESSFUL.")
+                        break
+                else:
+                    print("Could not recognize speech. Try again.")
+        except queue.Empty:
+            continue
 
 except KeyboardInterrupt:
     print("Interrupted by user.")
@@ -78,7 +92,6 @@ except KeyboardInterrupt:
 
 finally:
     print(" Stopping...")
-    stream.stop_stream()
+    stream.stop()
     stream.close()
-    audio.terminate()
 
