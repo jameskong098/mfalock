@@ -6,6 +6,8 @@ This program integrates multiple sensors and switches between them based on dete
 Current sensors:
 - Touch Pattern Lock (GPIO 26)
 - Rotary Angle Sensor (ADC Pin 28)
+
+Author: James Kong
 """
 
 from machine import Pin, ADC

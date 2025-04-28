@@ -32,6 +32,7 @@ import socket
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %I:%M:%S %p', 
     handlers=[logging.StreamHandler()]
 )
 logger = logging.getLogger("MFALock")
@@ -40,6 +41,9 @@ logger = logging.getLogger("MFALock")
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'mfalock-secret-key!'
 socketio = SocketIO(app)
+
+LISTENER_PI_IP = "192.168.1.36" # Replace with the actual IP
+LISTENER_PI_PORT = 8080
 
 # Global variables
 pico_connected = False
@@ -272,6 +276,7 @@ def monitor_pico():
                     auth_log_entries.append(log_entry)
                     save_logs(auth_log_entries)
                     socketio.emit('auth_event', log_entry)
+                    send_to_listener("SUCCESS") 
                 
                 # Detect failed attempts
                 elif "timeout" in line or "Incorrect input" in line:
@@ -287,7 +292,8 @@ def monitor_pico():
                     }
                     auth_log_entries.append(log_entry)
                     save_logs(auth_log_entries)
-                    socketio.emit('auth_event', log_entry)
+                    socketio.emit('auth_event', log_entry) 
+                    send_to_listener("FAILURE") 
             
             time.sleep(0.1)
     except Exception as e:
@@ -936,6 +942,26 @@ def save_color_sequence_to_json(color_sequence):
 
 def update_audio():
     return None
+
+def send_to_listener(message):
+    """Sends a message to the listener Pi."""
+    if not LISTENER_PI_IP:
+        logger.warning("Listener Pi IP address is not configured. Cannot send message.")
+        return
+
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(3) # Set a timeout (e.g., 3 seconds)
+            logger.info(f"Attempting to connect to listener Pi at {LISTENER_PI_IP}:{LISTENER_PI_PORT}")
+            s.connect((LISTENER_PI_IP, LISTENER_PI_PORT))
+            s.sendall(message.encode('utf-8'))
+            logger.info(f"Sent message '{message}' to listener Pi.")
+    except socket.timeout:
+        logger.error(f"Connection to listener Pi ({LISTENER_PI_IP}:{LISTENER_PI_PORT}) timed out.")
+    except socket.error as e:
+        logger.error(f"Could not connect or send to listener Pi ({LISTENER_PI_IP}:{LISTENER_PI_PORT}): {e}")
+    except Exception as e:
+        logger.error(f"An unexpected error occurred while sending to listener: {e}")
 
 @socketio.on('connect')
 def handle_connect():

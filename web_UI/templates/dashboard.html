@@ -2,18 +2,20 @@
 
 {% block content %}
 <section id="dashboard">
-    <!-- Authentication Method Selector - Full Width -->
-    <div class="card full-width">
-        <h2 class="section-title">Authentication Method</h2>
-        <div class="auth-method-selector">
-            <button class="auth-button" data-method="face">Face Recognition</button>
-            <button class="auth-button" data-method="voice">Voice Recognition</button>
-            <button class="auth-button" data-method="keypad">Keypad Access</button>
-            <button class="auth-button active" data-method="touch">Tap Pattern</button>
-            <button class="auth-button" data-method="rotary">Rotary Combination</button>
+    <!-- Auth Controls: Mode + Method Indicators in a single horizontal row (moved above cards, spaced out) -->
+    <div class="auth-controls subtle spaced">
+        <div class="sensor-mode-indicator">
+            Current Mode: <span id="current-sensor-mode">Idle</span>
+        </div>
+        <div class="auth-methods">
+            <div class="auth-method-indicator" id="touch-method">
+                <i class="fas fa-hand-pointer"></i> Touch Pattern
+            </div>
+            <div class="auth-method-indicator" id="rotary-method">
+                <i class="fas fa-sync-alt"></i> Rotary Input
+            </div>
         </div>
     </div>
-    
     <!-- Two-column layout for Dashboard and Events -->
     <div class="dashboard-grid">
         <!-- Security Dashboard - Left Column -->
@@ -45,20 +47,6 @@
         </div>
     </div>
 
-    <!-- Add to your dashboard.html or other templates where needed -->
-    <div class="sensor-mode-indicator">
-        Current Mode: <span id="current-sensor-mode">Idle</span>
-    </div>
-
-    <div class="auth-methods">
-        <div class="auth-method-button" id="touch-method">
-            <i class="fas fa-hand-pointer"></i> Touch Pattern
-        </div>
-        <div class="auth-method-button" id="rotary-method">
-            <i class="fas fa-sync-alt"></i> Rotary Input
-        </div>
-    </div>
-
     <div class="touch-instructions">
         <!-- Your existing touch pattern instructions -->
     </div>
@@ -68,7 +56,7 @@
         <p>Turn the dial to point to the correct sequence of colors.</p>
         <p class="instruction-step">Wait 3 seconds on each color to select it. Keep in mind that turning the rotary knob has a bit of lag!</p>
         
-        <div class="rotary-lock-container">
+        <div class="rotary-lock-container horizontal-layout">
             <div class="circular-lock">
                 <div class="quadrant" data-color="red" style="background-color: #FF6B6B;"></div>
                 <div class="quadrant" data-color="blue" style="background-color: #4ECDC4;"></div>
@@ -80,7 +68,7 @@
                     <div class="pointer"></div>
                 </div>
             </div>
-            <div class="selected-colors-container">
+            <div class="selected-colors-container side">
                 <p>Selected Colors:</p>
                 <div id="selected-colors" class="selected-colors">
                     <div class="color-placeholder"></div>
