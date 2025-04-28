@@ -12,6 +12,8 @@ import time
 import socket
 import logging
 import sys
+import serial
+import subprocess
 
 # Configure logging
 logging.basicConfig(
@@ -27,6 +29,27 @@ LISTENER_HOST = '0.0.0.0'  # Listen on all available network interfaces
 LISTENER_PORT = 8080     # Port to listen on (must match web_server.py)
 # ---------------------
 
+def send_command_to_servo(command):
+    """
+    Sends a command to the servo_lock program running on the Pico via serial.
+    """
+    try:
+        # Open the serial connection
+        with serial.Serial("/dev/ttyACM0", 9600, timeout=1) as ser:
+            # Send the command followed by a newline
+            ser.write(f"{command}\n".encode('utf-8'))
+            logger.info(f"Sent command to servo: {command}")
+            
+            response = ser.readline().decode('utf-8').strip()
+            if response:
+                logger.info(f"Received response from servo: {response}")
+            else:
+                logger.warning("No response received from servo.")
+    except serial.SerialException as e:
+        logger.error(f"Serial communication error: {e}")
+    except Exception as e:
+        logger.error(f"Failed to send command to servo: {e}")
+
 def handle_message(message):
     """
     Process the received message.
@@ -36,7 +59,9 @@ def handle_message(message):
     logger.info(f"Processing message: {message}")
     if message == "SUCCESS":
         logger.info("Authentication Successful - Performing success action...")
-        # Add your success action here (e.g., unlock a door)
+        send_command_to_servo("unlock")
+        time.sleep(5)  
+        send_command_to_servo("lock")
     elif message == "FAILURE":
         logger.info("Authentication Failed - Performing failure action...")
         # Add your failure action here (e.g., flash an LED)

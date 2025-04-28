@@ -10,6 +10,7 @@ servo = SERVO(Pin(26))  # GPIO26 = A0
 servo.turn(45)
 sleep(1)
 
+print("Servo initialized. Waiting for commands... Version 2.0")
 while True:
     if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
         command = sys.stdin.readline().strip()
