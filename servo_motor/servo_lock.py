@@ -18,7 +18,7 @@ while True:
         if command == "lock":
             servo.turn(90)
         elif command == "unlock":
-            servo.turn(-90)
+            servo.turn(5)
 
         sleep(1)
     else:

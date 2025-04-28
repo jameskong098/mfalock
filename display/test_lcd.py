@@ -10,7 +10,7 @@ width = DisplayHATMini.WIDTH
 height = DisplayHATMini.HEIGHT
 buffer = Image.new("RGB", (width, height))
 draw = ImageDraw.Draw(buffer)
-
+face_process = None
 display = DisplayHATMini(buffer)
 font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 16)
 
@@ -38,6 +38,7 @@ menu_options = [
     "Facial Recognition",
     "Voice Recognition",
     "Touch Password",
+    "Rotary Authentication",
     "Keypad Authentication",
     "Basic Unlock"
 ]
@@ -156,6 +157,9 @@ def draw_error_screen(error_message):
     display.display()
     time.sleep(1)  # Display error for 1 second
 
+"""
+LCD SCREENS FOR FACIAL RECOGNITION  
+"""
 def draw_facial_recognition_screen():
     """
     shows a loading screen for facial recognition.
@@ -180,6 +184,47 @@ def draw_facial_recognition_success_screen():
     draw.text((20, 20), "Facial Recognition Successful", font=font, fill=(0, 255, 0))
     draw.text((10, height - 20), "Press Y to Return", font=font, fill=(180, 180, 180))
     display.display()
+
+# --- Facial Recognition Starter Function ---
+def start_facial_recognition(script_path="/path/to/your/facialrecognition.py", timeout=30):
+    """
+    Starts facial recognition script, captures the result (SUCCESS or FAILURE).
+
+    Args:
+        script_path (str): Path to the facial recognition Python script.
+        timeout (int): Timeout in seconds to wait for facial recognition to finish.
+
+    Returns:
+        str: "SUCCESS", "FAILURE", or "TIMEOUT"
+    """
+    try:
+        face_process = subprocess.Popen(
+            ["python3", script_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+
+        try:
+            output, error = face_process.communicate(timeout=timeout)
+            output = output.strip()
+
+            if output == "SUCCESS":
+                return "SUCCESS"
+            else:
+                return "FAILURE"
+
+        except subprocess.TimeoutExpired:
+            face_process.kill()
+            print("Facial recognition timed out.")
+            return "TIMEOUT"
+
+    except Exception as e:
+        print(f"Error starting facial recognition: {e}")
+        return "FAILURE"
+
+
+""" AUDIO AUTHENTICATION Screens"""
 
 # Set backlight
 display.set_led(0.05, 0.05, 0.05)
@@ -210,10 +255,21 @@ while True:
             elif selected == "Facial Recognition":
                 current_screen = "facial_recognition"
                 draw_facial_recognition_screen()
-                try:
-                    subprocess.Popen(["python3", "/path/to/your/facialrecognition.py"])
-                except Exception as e:
-                    print("Failed to start facial recognition:", e)
+                time.sleep(1)  # Give 1 second to show loading screen
+
+                # Start facial recognition and capture result
+                result = start_facial_recognition("/path/to/your/facialrecognition.py")
+
+                if result == "SUCCESS":
+                    draw_facial_recognition_success_screen()
+                elif result == "FAILURE":
+                    draw_facial_recognition_error_screen()
+                elif result == "TIMEOUT":
+                    draw_error_screen("Face Recognition Timeout!")
+
+                time.sleep(2)  # Show the success or failure screen briefly
+                current_screen = "home"
+                draw_home_screen()
             time.sleep(0.2)
 
     elif current_screen == "lock":
@@ -338,11 +394,9 @@ while True:
             time.sleep(0.2)
     elif current_screen == "facial_recognition":
         if display.read_button(display.BUTTON_Y):
-            # Cancel facial recognition
-            try:
-                subprocess.Popen(["pkill", "-f", "/path/to/your/facialrecognition.py"])
-            except Exception as e:
-                print("Failed to stop facial recognition:", e)
+            if face_process and face_process.poll() is None:
+                face_process.terminate()
+                face_process = None
             current_screen = "home"
             draw_home_screen()
             time.sleep(0.2)
