@@ -80,25 +80,44 @@ You also need to ensure the `ALLOWED_WEB_SERVER_IP` in `listener.py` matches the
     ```
 7.  The script will first attempt to copy `servo.py` from the project's `servo_motor` directory to the Pico. It will then start listening for connections and log messages to the console, including `mpremote` communication attempts with the Pico. Keep this script running in the background (e.g., using `screen`, `tmux`, or as a systemd service) for the system to function correctly.
 
+## Multi-Factor Authentication Session Logic
+
+The listener requires multiple unique authentication methods for a successful unlock. The logic is as follows:
+
+- Each session starts when the first authentication message is received.
+- You must authenticate with a configurable number of different methods (e.g., VOICE, TOUCH, KEYPAD, etc.) within a set time window.
+- If the required number of unique methods is reached (default: 3), the lock will unlock and then re-lock after the configured delay.
+- If the session times out before reaching the required count, the session resets and you must start over.
+- Duplicate methods within the same session are ignored.
+- Only messages in the format "<METHOD> - SUCCESS" or "<METHOD> - FAILURE" are accepted. Malformed messages are ignored and logged.
+
+### Configuration
+
+At the top of `listener.py`, you can adjust these variables:
+
+```
+REQUIRED_AUTH_COUNT = 3  # Number of unique authentication methods required
+SESSION_TIMEOUT_SECONDS = 30  # Time allowed per session (seconds)
+```
+
+Change these values to fit your security and usability needs.
+
 ## Testing the Listener (`send_test_msg.py`)
 
 The `send_test_msg.py` script is provided for testing the listener service independently.
 
-**Purpose:**
-
--   Allows you to manually send a "SUCCESS" message to the running `listener.py` service.
--   Useful for verifying that the listener is running, accepting connections, and triggering the servo unlock/lock sequence correctly via `mpremote` without needing the full web server to be operational.
+- Allows you to manually send any message to the running `listener.py` service, such as `TOUCH - SUCCESS`, `VOICE - FAILURE`, etc.
+- Useful for verifying that the listener is running, accepting connections, and triggering the servo unlock/lock sequence correctly via `mpremote` without needing the full web server to be operational.
 
 **How to Use:**
 
-1.  **Ensure `listener.py` is running** on its designated Pi and configured correctly (especially `ALLOWED_WEB_SERVER_IP`).
-2.  **Open `send_test_msg.py`** in a text editor.
-3.  **Modify the `HOST` variable** in `send_test_msg.py` to match the IP address of the Pi running `listener.py`.
-4.  **Important:** The IP address of the machine *running* `send_test_msg.py` **must** be the IP address listed in the `ALLOWED_WEB_SERVER_IP` setting within `listener.py`. If you are testing from a different machine than the actual web server, you might need to temporarily update `ALLOWED_WEB_SERVER_IP` in `listener.py` to the IP of your testing machine.
-5.  **Navigate to the `listener` directory** in a terminal on the machine where you edited `send_test_msg.py`.
-6.  **Run the script:**
+1.  Ensure `listener.py` is running on its designated Pi and configured correctly (especially `ALLOWED_WEB_SERVER_IP`).
+2.  Modify the `HOST` variable in `send_test_msg.py` to match the IP address of the Pi running `listener.py`.
+3.  The IP address of the machine running `send_test_msg.py` must be the IP address listed in the `ALLOWED_WEB_SERVER_IP` setting within `listener.py`.
+4.  Navigate to the `listener` directory in a terminal on the machine where you edited `send_test_msg.py`.
+5.  Run the script:
     ```bash
     python send_test_msg.py
     ```
-7.  Press Enter when prompted. This will send the "SUCCESS" message.
-8.  Observe the console output of `listener.py` and check if the servo performs the unlock and re-lock actions as expected.
+6.  Type your test message (e.g., `TOUCH - SUCCESS`) and press Enter. You can send as many test messages as you like.
+7.  Observe the console output of `listener.py` and check if the servo performs the unlock and re-lock actions as expected.

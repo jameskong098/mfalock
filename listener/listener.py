@@ -31,6 +31,21 @@ ALLOWED_WEB_SERVER_IP = "172.20.102.83" # IP of the web_server Pi
 UNLOCK_TO_LOCK_DELAY = 3  # Delay in seconds between unlock and lock commands
 # ---------------------
 
+# --- Multi-factor Session Configuration ---
+REQUIRED_AUTH_COUNT = 3  # Number of unique authentication methods required
+SESSION_TIMEOUT_SECONDS = 30  # Time allowed per session (seconds)
+# -----------------------------------------
+
+# Session state
+session_methods = set()
+session_start_time = None
+
+def reset_session():
+    global session_methods, session_start_time
+    session_methods = set()
+    session_start_time = None
+    logger.info("Session reset.")
+
 def send_command_to_servo(command):
     """
     Sends a command to the Pico using mpremote exec to directly control the servo.
@@ -76,19 +91,48 @@ def send_command_to_servo(command):
 def handle_message(message):
     """
     Process the received message.
-    Implement your logic here based on the message content.
-    For example, control GPIO pins, display messages, etc.
+    Supports messages in the format '<METHOD> - SUCCESS' or '<METHOD> - FAILURE'.
+    Implements multi-factor session logic.
     """
+    global session_methods, session_start_time
     logger.info(f"Processing message: {message}")
-    if message == "SUCCESS":
-        logger.info("Authentication Successful - Performing success action...")
-        send_command_to_servo("unlock")
-        time.sleep(UNLOCK_TO_LOCK_DELAY) 
-        send_command_to_servo("lock")
-    elif message == "FAILURE":
-        logger.info("Authentication Failed.")
-    else:
-        logger.warning(f"Received unknown message: {message}")
+    try:
+        if ' - ' in message:
+            method, status = message.split(' - ', 1)
+            method = method.strip().upper()
+            status = status.strip().upper()
+        else:
+            logger.warning(f"Received malformed message: {message}")
+            return
+
+        now = time.time()
+        # Start or check session
+        if session_start_time is None:
+            session_start_time = now
+            logger.info("New authentication session started.")
+        elif now - session_start_time > SESSION_TIMEOUT_SECONDS:
+            logger.info("Session timed out. Resetting session.")
+            reset_session()
+            session_start_time = now
+
+        if status == "SUCCESS":
+            if method in session_methods:
+                logger.info(f"Method {method} already used in this session. Ignoring.")
+            else:
+                session_methods.add(method)
+                logger.info(f"Authenticated with {method}. Methods this session: {session_methods}")
+                if len(session_methods) >= REQUIRED_AUTH_COUNT:
+                    logger.info(f"Required {REQUIRED_AUTH_COUNT} unique methods reached. Unlocking.")
+                    send_command_to_servo("unlock")
+                    time.sleep(UNLOCK_TO_LOCK_DELAY)
+                    send_command_to_servo("lock")
+                    reset_session()
+        elif status == "FAILURE":
+            logger.info(f"Authentication Failed via {method}.")
+        else:
+            logger.warning(f"Received unknown status: {status} in message: {message}")
+    except Exception as e:
+        logger.error(f"Error parsing message: {e}")
 
 def check_and_copy_servo_files():
     """

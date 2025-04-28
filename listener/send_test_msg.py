@@ -4,15 +4,18 @@ import sys
 HOST = '172.20.102.83'  # or the IP address of the listener server
 PORT = 8080         # must match LISTENER_PORT in listener.py
 
-print("Press Enter to send an unlock/lock test message to the listener server. Press Ctrl+C to exit.")
+print("Type a test message to send to the listener server (e.g., 'TOUCH - SUCCESS'). Press Ctrl+C to exit.")
 
 try:
     while True:
-        input("Press Enter to send test message...")
+        msg = input("Enter test message: ").strip()
+        if not msg:
+            print("No message entered. Please type a message.")
+            continue
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((HOST, PORT))
-            s.sendall(b"SUCCESS\n")
-        print("Test message sent (SUCCESS). The servo should unlock, then lock after a designated number of seconds.")
+            s.sendall((msg + "\n").encode('utf-8'))
+        print(f"Test message sent: {msg}")
 except KeyboardInterrupt:
     print("\nExiting test client.")
     sys.exit(0)
