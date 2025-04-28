@@ -5,15 +5,27 @@
     <div class="card">
         <h2 class="section-title">System Settings</h2>
         
-        <form id="upload-form" action="/upload" method="POST" enctype="multipart/form-data">
+        <form id="upload-images" action="/upload" method="POST" enctype="multipart/form-data">
             <div class="form-group">
               <label for="security-level">Upload Image for Face Recognition</label>
               <p>Image must have your full face</p>
               <input type="file" name="picture" accept="image/*" required>
               <button type="submit">Upload</button>
             </div>
-          </form>
-          
+            <div class="">
+                <p>Aproved faces</p>
+                <script> 
+                    
+
+                </script>
+            </div>
+        </form> 
+        <form id="upload-images" action="/blacklist" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+              <input type="file" name="picture" accept="image/*" required>
+              <button type="submit">Upload Blacklist</button>
+            </div>
+        </form> 
         <form id="settings-form">
             <div class="form-group">
                 <label for="security-level">Security Level</label>
