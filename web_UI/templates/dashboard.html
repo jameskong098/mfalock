@@ -47,8 +47,15 @@
         </div>
     </div>
 
-    <div class="touch-instructions">
-        <!-- Your existing touch pattern instructions -->
+    <div class="touch-display" style="display: none;">
+        <h3>Touch Authentication</h3>
+        <div class="live-touch-container">
+            <label for="live-touch-sensor" class="live-touch-label">Touch Sensor</label>
+            <div class="pattern-animation" id="live-pattern-demo">
+                <div class="sensor" id="live-touch-sensor" tabindex="0" aria-label="Live Touch Sensor"></div>
+            </div>
+            <div id="live-touch-status" class="status-message live-touch-status"></div>
+        </div>
     </div>
 
     <div class="rotary-instructions" style="display: none;">
@@ -81,6 +88,7 @@
         
         <div id="rotary-angle-display">0°</div>
         <div id="rotary-status" class="status-message"></div>
+        <button id="rotary-reset-btn" class="btn small" style="margin-top: 16px;">Reset Pattern</button>
     </div>
 </section>
 {% endblock %}

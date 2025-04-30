@@ -234,25 +234,42 @@ tr:hover {
     background-color: #f1f1f1;
     border-radius: var(--border-radius);
     position: relative;
-    overflow: hidden;
+    overflow: visible;
     margin: 20px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 16px 0;
 }
 
 .sensor {
-    width: 50px;
-    height: 50px;
-    background-color: var(--secondary-color);
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    transition: all 0.3s;
+    background: #eee;
+    border: 3px solid #bbb;
+    transition: background 0.2s, box-shadow 0.2s;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .sensor.active {
     background-color: var(--accent-color);
-    transform: translate(-50%, -50%) scale(1.2);
+    background: #3498db;
+    box-shadow: 0 0 16px #3498db88;
+    transform: scale(1.1);
+}
+
+.sensor.success {
+    background: #27ae60 !important;
+    box-shadow: 0 0 16px #27ae6088;
+}
+
+.sensor.error {
+    background: #e74c3c !important;
+    box-shadow: 0 0 16px #e74c3c88;
 }
 
 .form-group {
@@ -1637,4 +1654,96 @@ tr:hover {
     font-size: 14px;
     cursor: pointer;
   }
-  
+
+.live-touch-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 24px 0 0 0;
+    padding: 20px 0;
+    background: #f8fafc;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(44, 62, 80, 0.07);
+    max-width: 340px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.live-touch-label {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: 10px;
+    letter-spacing: 0.5px;
+}
+
+#live-pattern-demo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 0 auto 10px auto;
+}
+
+#live-touch-sensor {
+    width: 80px;
+    height: 80px;
+    background: #e3eaf2;
+    border: 4px solid #3498db;
+    border-radius: 50%;
+    box-shadow: 0 4px 16px rgba(52, 152, 219, 0.12);
+    margin: 0 auto;
+    transition: background 0.2s, box-shadow 0.2s, border-color 0.2s;
+    outline: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#live-touch-sensor.active {
+    background: #3498db;
+    border-color: #217dbb;
+    box-shadow: 0 0 24px #3498db88;
+}
+
+#live-touch-sensor.success {
+    background: #27ae60;
+    border-color: #219150;
+    box-shadow: 0 0 24px #27ae6088;
+}
+
+#live-touch-sensor.error {
+    background: #e74c3c;
+    border-color: #c0392b;
+    box-shadow: 0 0 24px #e74c3c88;
+}
+
+.live-touch-status {
+    margin-top: 18px;
+    font-size: 1.1rem;
+    font-weight: 500;
+    min-height: 28px;
+    color: #333;
+    letter-spacing: 0.2px;
+    transition: color 0.2s;
+}
+
+.live-touch-status.success {
+    color: #27ae60;
+}
+
+.live-touch-status.error {
+    color: #e74c3c;
+}
+
+.color-sequence-display {
+    display: flex;
+    gap: 10px;
+    margin: 8px 0 0 0;
+}
+.color-sequence-display .color-circle {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid #bbb;
+    display: inline-block;
+}

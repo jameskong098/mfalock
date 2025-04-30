@@ -224,6 +224,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize rotary lock system
     initRotaryLock();
+    
+    // Listen for live touch events from backend
+    if (typeof socket !== 'undefined') {
+        socket.on('touch_event', function(data) {
+            updateLiveTouchSensor(data.action);
+        });
+    }
+
+    // Rotary reset button handler
+    const rotaryResetBtn = document.getElementById('rotary-reset-btn');
+    if (rotaryResetBtn) {
+        rotaryResetBtn.addEventListener('click', function() {
+            if (typeof resetColorSequence === 'function') {
+                resetColorSequence();
+            }
+        });
+    }
 });
 
 // Modified function to add events to the live events list
@@ -284,12 +301,12 @@ function updateSensorModeUI(mode) {
         if (mode === 'touch') {
             touchMethodElem.classList.add('active');
             rotaryMethodElem.classList.remove('active');
-            document.querySelectorAll('.touch-instructions').forEach(el => el.style.display = 'block');
+            document.querySelectorAll('.touch-display').forEach(el => el.style.display = 'block');
             document.querySelectorAll('.rotary-instructions').forEach(el => el.style.display = 'none');
         } else if (mode === 'rotary') {
             touchMethodElem.classList.remove('active');
             rotaryMethodElem.classList.add('active');
-            document.querySelectorAll('.touch-instructions').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.touch-display').forEach(el => el.style.display = 'none');
             document.querySelectorAll('.rotary-instructions').forEach(el => el.style.display = 'block');
         } else {
             touchMethodElem.classList.remove('active');
@@ -562,5 +579,53 @@ function initRotaryLock() {
         
         rotaryStatus.textContent = "";
         rotaryStatus.className = "status-message";
+    }
+
+    // Make resetColorSequence globally accessible
+    window.resetColorSequence = resetColorSequence;
+}
+
+// Animate the live touch sensor based on action
+function updateLiveTouchSensor(action) {
+    const sensor = document.getElementById('live-touch-sensor');
+    const status = document.getElementById('live-touch-status');
+    if (!sensor) return;
+
+    // Reset classes
+    sensor.classList.remove('active', 'success', 'error');
+    if (status) status.textContent = '';
+
+    switch (action) {
+        case 'tap':
+            sensor.classList.add('active');
+            setTimeout(() => sensor.classList.remove('active'), 180);
+            break;
+        case 'hold_start':
+            sensor.classList.add('active');
+            break;
+        case 'hold_end':
+            sensor.classList.remove('active');
+            break;
+        case 'success':
+            sensor.classList.add('success');
+            if (status) status.textContent = 'Success!';
+            setTimeout(() => {
+                sensor.classList.remove('success');
+                if (status) status.textContent = '';
+            }, 1200);
+            break;
+        case 'failure':
+        case 'timeout':
+            sensor.classList.add('error');
+            if (status) status.textContent = action === 'timeout' ? 'Timeout!' : 'Failed!';
+            setTimeout(() => {
+                sensor.classList.remove('error');
+                if (status) status.textContent = '';
+            }, 1200);
+            break;
+        case 'reset':
+            sensor.classList.remove('active', 'success', 'error');
+            if (status) status.textContent = '';
+            break;
     }
 }

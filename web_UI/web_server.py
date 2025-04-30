@@ -269,7 +269,33 @@ def monitor_pico():
             line = pico_process.stdout.readline().strip()
             if line:
                 logger.info(f"Pico: {line}")
-                
+
+                # --- Touch event emission ---
+                if "Touch started" in line:
+                    socketio.emit('touch_event', {'action': 'hold_start'})
+                elif "Touch ended" in line:
+                    # You can parse the duration if you want, e.g. "Touch ended: 1200ms"
+                    try:
+                        duration = int(line.split("Touch ended:")[1].replace("ms", "").strip())
+                        # If it's a quick tap, treat as tap; if longer, treat as hold_end
+                        if duration < 500:
+                            socketio.emit('touch_event', {'action': 'tap'})
+                        else:
+                            socketio.emit('touch_event', {'action': 'hold_end', 'duration': duration})
+                    except Exception:
+                        socketio.emit('touch_event', {'action': 'hold_end'})
+                elif "Step 1: Tap detected" in line or "Step 3: Tap detected" in line:
+                    socketio.emit('touch_event', {'action': 'tap'})
+                elif "Step 2: Hold detected" in line:
+                    socketio.emit('touch_event', {'action': 'hold_end'})
+                elif "TOUCH - SUCCESS" in line:
+                    socketio.emit('touch_event', {'action': 'success'})
+                elif "timeout" in line or "Incorrect input" in line:
+                    socketio.emit('touch_event', {'action': 'failure'})
+                elif "Sensor timeout: returning to idle state" in line:
+                    socketio.emit('touch_event', {'action': 'reset'})
+                # --- End touch event emission ---
+
                 # Detect sensor mode changes
                 if "Touch sensor activated" in line:
                     prev_mode = current_sensor_mode

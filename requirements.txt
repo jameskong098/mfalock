@@ -5,5 +5,5 @@ opencv-python
 face_recognition
 vosk
 mpremote==1.24.1
-pyaudio
+paramiko
 python-dotenv
