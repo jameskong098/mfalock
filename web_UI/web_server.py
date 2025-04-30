@@ -911,7 +911,6 @@ def update_sensor_pattern():
                 return False
         else:
              logger.warning(f"Settings file not found at {settings_host_path}. Pico might use defaults or fail.")
-             # Decide if this is acceptable. For now, continue but log warning.
 
 
         # Wait briefly for file system operations to complete
