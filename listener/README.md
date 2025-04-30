@@ -121,10 +121,10 @@ The `send_test_msg.py` script is provided for testing the listener service indep
 
 **How to Use:**
 
-1.  Ensure `listener.py` is running on its designated Pi and configured correctly (especially `ALLOWED_WEB_SERVER_IP`).
-2.  Modify the `HOST` variable in `send_test_msg.py` to match the IP address of the Pi running `listener.py`.
-3.  The IP address of the machine running `send_test_msg.py` must be the IP address listed in the `ALLOWED_WEB_SERVER_IP` setting within `listener.py`.
-4.  Navigate to the `listener` directory in a terminal on the machine where you edited `send_test_msg.py`.
+1.  Ensure `listener.py` is running on its designated Pi and configured correctly (especially `ALLOWED_WEB_SERVER_IP` in the root `.env` file).
+2.  Ensure the `LISTENER_PI_IP` and optionally `LISTENER_PI_PORT` (defaults to 8080) variables in the **root project `.env` file** (`mfalock/.env`) are set to the correct IP address and port of the Pi running `listener.py`. The `send_test_msg.py` script will read these values.
+3.  The IP address of the machine running `send_test_msg.py` must be the IP address listed in the `ALLOWED_WEB_SERVER_IP` setting within the root `.env` file (used by `listener.py`).
+4.  Navigate to the `listener` directory in a terminal on the machine where you intend to run `send_test_msg.py`.
 5.  Run the script:
     ```bash
     python send_test_msg.py

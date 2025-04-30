@@ -92,6 +92,18 @@ def handle_auth_event(data):
     if data.get('method') == 'Rotary Lock' and data.get('status') == 'success':
         logger.info("Detected successful rotary authentication, sending to listener.")
         send_to_listener("ROTARY - SUCCESS")
+    # Check if it's a successful face authentication and send to listener
+    elif data.get('method') == 'Facial Recognition' and data.get('status') == 'success':
+        logger.info("Detected successful facial recognition authentication, sending to listener.")
+        send_to_listener("FACIAL RECOGNITION - SUCCESS")
+    # Check if it's a successful face authentication and send to listener
+    elif data.get('method') == 'Voice Recognition' and data.get('status') == 'success':
+        logger.info("Detected successful voice recognition authentication, sending to listener.")
+        send_to_listener("VOICE RECOGNITION - SUCCESS")
+    # Check if it's a successful face authentication and send to listener
+    elif data.get('method') == 'Keypad' and data.get('status') == 'success':
+        logger.info("Detected successful keypad authentication, sending to listener.")
+        send_to_listener("KEYPAD - SUCCESS")
 
 def load_logs():
     """Load logs from the log file."""
