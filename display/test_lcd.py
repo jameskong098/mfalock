@@ -4,6 +4,9 @@ from PIL import Image, ImageDraw, ImageFont
 import time
 import os
 import subprocess
+import socketio
+# pip install "python-socketio[client]"
+
 
 # Display setup
 width = DisplayHATMini.WIDTH
@@ -47,6 +50,8 @@ menu_index = 0
 # Confirmation prompt tracking
 confirm_index = 0  # 0 = "Go Back", 1 = "Confirm"
 user_password = ""  # Will hold the confirmed password after setup
+
+
 
 
 def draw_home_screen():
@@ -229,8 +234,16 @@ def start_facial_recognition(script_path="/path/to/your/facialrecognition.py", t
 # Set backlight
 display.set_led(0.05, 0.05, 0.05)
 
+sio = socketio.Client()
+try:
+    sio.connect("http://<YOUR_SOCKET_SERVER_IP>:PORT")  # Replace with actual IP and port
+except Exception as e:
+    print("Socket connection failed:", e)
+
 # Draw the initial screen (set password)
 draw_set_password_screen()
+
+
 
 while True:
     if current_screen == "home":
@@ -262,10 +275,47 @@ while True:
 
                 if result == "SUCCESS":
                     draw_facial_recognition_success_screen()
+                    #Sends socket event for successful authentication to webserver.py
+                    try:
+                        sio.emit('auth_event', {
+                            'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+                            'status': 'success',
+                            'message': 'Access granted: Face recognized',
+                            'method': 'Facial Recognition',
+                            'user': 'User',  # Customize as needed
+                            'location': 'Main Entrance',
+                            'details': 'Matched with known face'
+                        })
+                    except Exception as e:
+                        print("Failed to send socket event:", e)
                 elif result == "FAILURE":
                     draw_facial_recognition_error_screen()
+                    try:
+                        sio.emit('auth_event', {
+                            'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+                            'status': 'Failure',
+                            'message': 'Access Not granted: Unknown face',
+                            'method': 'Facial Recognition',
+                            'user': 'User',  # Customize as needed
+                            'location': 'Main Entrance',
+                            'details': 'Did not Match with a known face'
+                        })
+                    except Exception as e:
+                        print("Failed to send socket event:", e)
                 elif result == "TIMEOUT":
                     draw_error_screen("Face Recognition Timeout!")
+                    try:
+                        sio.emit('auth_event', {
+                            'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+                            'status': 'Failure',
+                            'message': 'Access not Granted: Timeout',
+                            'method': 'Facial Recognition',
+                            'user': 'User',  # Customize as needed
+                            'location': 'Main Entrance',
+                            'details': 'Facial recognition timed out'
+                        })
+                    except Exception as e:
+                        print("Failed to send socket event:", e)
 
                 time.sleep(2)  # Show the success or failure screen briefly
                 current_screen = "home"

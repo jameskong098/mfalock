@@ -1,0 +1,17 @@
+{
+    "pattern": [
+        {
+            "action": "tap",
+            "duration": 0
+        },
+        {
+            "action": "hold",
+            "duration": 1000
+        },
+        {
+            "action": "tap",
+            "duration": 0
+        }
+    ],
+    "created_at": "2025-04-09T11:24:46.905846"
+}
