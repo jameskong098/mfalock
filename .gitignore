@@ -2,6 +2,7 @@
 .DS_Store
 auth_logs.json
 settings.json
+voice_auth_log.txt
 
 
 # Byte-compiled / optimized / DLL files
