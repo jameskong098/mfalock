@@ -17,10 +17,20 @@ The `handle_message` function within `listener.py` implements these actions. For
 
 ## Configuration
 
+Environment variables are loaded from a `.env` file located in the **project root directory** (`mfalock/.env`).
+
 - **`LISTENER_HOST`**: Set to `'0.0.0.0'` to listen on all available network interfaces on the device running the listener.
-- **`LISTENER_PORT`**: The port number the listener server will bind to. This **must** match the `LISTENER_PI_PORT` configured in `web_server.py`. The default is `8080`.
-- **`ALLOWED_WEB_SERVER_IP`**: The IP address of the main web server Pi. The listener will *only* accept connections from this IP address. This **must** be configured correctly in `listener.py`.
+- **`LISTENER_PORT`**: The port number the listener server will bind to. This **must** match the `LISTENER_PI_PORT` configured in the root `.env` file. The default is `8080`.
+- **`ALLOWED_WEB_SERVER_IP`**: The IP address of the main web server Pi. The listener will *only* accept connections from this IP address. This **must** be configured correctly in the root `.env` file.
 - **`UNLOCK_TO_LOCK_DELAY`**: The time in seconds the listener waits after unlocking before sending the lock command. Default is 3 seconds.
+
+**Example `.env` file (in `mfalock/`):**
+```dotenv
+LISTENER_PI_IP=192.168.1.101 # IP of the listener Pi (used by web_server.py)
+LISTENER_PORT=8080
+ALLOWED_WEB_SERVER_IP=192.168.1.100 # IP of the web server Pi (used by listener.py)
+# Add other variables as needed
+```
 
 ## Finding the Listener Pi's IP Address
 
@@ -45,15 +55,15 @@ The main web server needs the IP address of the device running `listener.py` to 
 
 ## Updating the Web Server
 
-Once you have the IP address of the device running the listener, you **must** update the `LISTENER_PI_IP` constant in `/Users/jameskong/Documents/mfalock/web_UI/web_server.py`:
+Once you have the IP address of the device running the listener, you **must** ensure the `LISTENER_PI_IP` variable is correctly set in the root `.env` file.
 
-```python
-# In web_server.py
-# ...
-LISTENER_PI_IP = "YOUR_LISTENER_PI_IP_ADDRESS" # Replace with the actual IP
-LISTENER_PI_PORT = 8080 # Must match LISTENER_PORT in listener.py
-# ...
+```dotenv
+# In mfalock/.env
+LISTENER_PI_IP="YOUR_LISTENER_PI_IP_ADDRESS" # Replace with the actual IP
+LISTENER_PORT=8080 # Ensure this matches the listener's port
+ALLOWED_WEB_SERVER_IP="YOUR_WEB_SERVER_IP_ADDRESS" # IP of the machine running web_server.py
 ```
+
 You also need to ensure the `ALLOWED_WEB_SERVER_IP` in `listener.py` matches the IP address of the Pi running `web_server.py`.
 
 ## Pico Setup
@@ -78,7 +88,7 @@ You also need to ensure the `ALLOWED_WEB_SERVER_IP` in `listener.py` matches the
     ```bash
     python listener.py
     ```
-7.  The script will first attempt to copy `servo.py` from the project's `servo_motor` directory to the Pico. It will then start listening for connections and log messages to the console, including `mpremote` communication attempts with the Pico. Keep this script running in the background (e.g., using `screen`, `tmux`, or as a systemd service) for the system to function correctly.
+7.  The script will first attempt to copy `servo.py` from the project's `pico_sensors/servo_motor` directory to the Pico. It will then load settings from the root `.env` file and start listening for connections. Keep this script running in the background (e.g., using `screen`, `tmux`, or as a systemd service) for the system to function correctly.
 
 ## Multi-Factor Authentication Session Logic
 

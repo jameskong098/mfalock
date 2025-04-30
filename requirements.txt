@@ -6,3 +6,4 @@ face_recognition
 vosk
 mpremote==1.24.1
 pyaudio
+python-dotenv

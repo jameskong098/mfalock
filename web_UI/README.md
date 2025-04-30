@@ -41,10 +41,23 @@ This web server provides an interface to monitor and control the MFA Lock, a tou
 
 ## Configuration
 
-The web server is pre-configured with default settings. You can modify the following parameters in `web_server.py` if needed:
+The web server requires the IP address of the listener Pi (the device running `listener.py`). This is configured using a `.env` file in the **project's root directory** (`mfalock/`).
 
-- `LOG_FILE_PATH` (default: `auth_logs.json`) - Path to the authentication logs file
-- Web server port (default: 8080)
+1.  **Create a `.env` file:** In the **root directory** (`mfalock/`), create a file named `.env`.
+2.  **Add the IP address:** Add the following line to the `.env` file, replacing `your_listener_pi_ip` with the actual IP address of your listener Pi:
+    ```dotenv
+    LISTENER_PI_IP=your_listener_pi_ip
+    ALLOWED_WEB_SERVER_IP=your_web_server_ip # Add this line too!
+    ```
+    **Note:** You also need to define `ALLOWED_WEB_SERVER_IP` in the same `.env` file for the `listener.py` script.
+
+    **Example `.env` file (in `mfalock/`):**
+    ```dotenv
+    LISTENER_PI_IP=192.168.1.101
+    ALLOWED_WEB_SERVER_IP=192.168.1.100 # IP of the machine running web_server.py
+    ```
+
+The server will read this file on startup. If the `LISTENER_PI_IP` is not defined in the `.env` file or as an environment variable, the server will log an error and exit.
 
 ## Hardware Setup
 

@@ -14,27 +14,40 @@ import logging
 import sys
 import os
 import subprocess
+from dotenv import load_dotenv 
+
+dotenv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')
+if os.path.exists(dotenv_path):
+    load_dotenv(dotenv_path=dotenv_path)
+    print(f"Loaded environment variables from: {dotenv_path}") 
+else:
+    print(f".env file not found at: {dotenv_path}") 
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %I:%M:%S %p', 
-    handlers=[logging.StreamHandler(sys.stdout)] # Log to standard output
+    handlers=[logging.StreamHandler(sys.stdout)] 
 )
 logger = logging.getLogger("ListenerPi")
 
 # --- Configuration ---
-LISTENER_HOST = '0.0.0.0'  # Listen on all available network interfaces
-LISTENER_PORT = 8080     # Port to listen on (must match web_server.py)
-ALLOWED_WEB_SERVER_IP = "172.20.102.83" # IP of the web_server Pi
-UNLOCK_TO_LOCK_DELAY = 3  # Delay in seconds between unlock and lock commands
-# ---------------------
+LISTENER_HOST = os.getenv('LISTENER_HOST', '0.0.0.0')
+LISTENER_PORT = int(os.getenv('LISTENER_PORT', '8080'))
+
+ALLOWED_WEB_SERVER_IP = os.getenv("ALLOWED_WEB_SERVER_IP")
+if ALLOWED_WEB_SERVER_IP is None:
+    logger.error("Error: ALLOWED_WEB_SERVER_IP environment variable not set.")
+    logger.error("Please define ALLOWED_WEB_SERVER_IP in your listener/.env file or environment variables.")
+    sys.exit(1) 
 
 # --- Multi-factor Session Configuration ---
 REQUIRED_AUTH_COUNT = 3  # Number of unique authentication methods required
+UNLOCK_TO_LOCK_DELAY = 3  # Delay in seconds between unlock and lock commands
 SESSION_TIMEOUT_SECONDS = 30  # Time allowed per session (seconds)
 # -----------------------------------------
+
 
 # Session state
 session_methods = set()
@@ -95,7 +108,7 @@ def handle_message(message):
     Implements multi-factor session logic.
     """
     global session_methods, session_start_time
-    logger.info(f"Processing message: {message}")
+
     try:
         if ' - ' in message:
             method, status = message.split(' - ', 1)
@@ -169,6 +182,7 @@ def start_listener_server():
         server_socket.listen(1) # Listen for one incoming connection at a time
         logger.info(f"Listener server started on {LISTENER_HOST}:{LISTENER_PORT}")
         logger.info(f"Only accepting connections from: {ALLOWED_WEB_SERVER_IP}") # Log allowed IP
+        logger.info(f"Unlock delay: {UNLOCK_TO_LOCK_DELAY}s, Required methods: {REQUIRED_AUTH_COUNT}, Session timeout: {SESSION_TIMEOUT_SECONDS}s") # Log other configs
 
         while True:
             logger.info("Waiting for a connection...")
@@ -185,7 +199,6 @@ def start_listener_server():
                         data = client_socket.recv(1024)
                         if data:
                             message = data.decode('utf-8').strip()
-                            logger.info(f"Received message: {message}")
                             handle_message(message)
                         else:
                             # Connection closed by client with no data

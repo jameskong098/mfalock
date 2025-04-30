@@ -237,7 +237,7 @@ def handle_touch_sensor():
                 
                 # Check if the pattern is complete
                 if current_pattern_step == len(custom_pattern):
-                    print("ACCESS GRANTED")
+                    print("TOUCH - SUCCESS")
                     current_pattern_step = 0  # Reset for the next attempt
                 
                 touch_last_tap_time = current_time

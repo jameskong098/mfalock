@@ -12,6 +12,7 @@ Date: March 10, 2025
 """
 
 import os
+import sys
 import time
 import json
 import threading
@@ -23,6 +24,15 @@ from flask import Flask, render_template, jsonify, request, send_file
 from flask_socketio import SocketIO, emit
 import uuid
 import socket
+from dotenv import load_dotenv 
+
+# Load environment variables from .env file in the root directory
+dotenv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')
+if os.path.exists(dotenv_path):
+    load_dotenv(dotenv_path=dotenv_path)
+    print(f"Loaded environment variables from: {dotenv_path}")
+else:
+    print(f".env file not found at: {dotenv_path}")
 
 # Configure logging
 logging.basicConfig(
@@ -38,8 +48,15 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'mfalock-secret-key!'
 socketio = SocketIO(app)
 
-LISTENER_PI_IP = "192.168.1.36" # Replace with the actual IP
-LISTENER_PI_PORT = 8080
+LISTENER_PI_IP = os.getenv("LISTENER_PI_IP")
+
+# Check if the environment variable was loaded
+if LISTENER_PI_IP is None:
+    logger.error("Error: LISTENER_PI_IP environment variable not set.")
+    logger.error("Please define LISTENER_PI_IP in your .env file or environment variables.")
+    sys.exit(1) 
+
+LISTENER_PI_PORT = int(os.getenv("LISTENER_PI_PORT", 8080)) 
 
 # Global variables
 pico_connected = False
@@ -70,6 +87,11 @@ def handle_auth_event(data):
     # Broadcast the event to all clients
     socketio.emit('auth_event', data)
     logger.info(f"Auth event received from client: {data['status']} - {data['message']}")
+
+    # Check if it's a successful rotary authentication and send to listener
+    if data.get('method') == 'Rotary Lock' and data.get('status') == 'success':
+        logger.info("Detected successful rotary authentication, sending to listener.")
+        send_to_listener("ROTARY - SUCCESS")
 
 def load_logs():
     """Load logs from the log file."""
@@ -276,7 +298,7 @@ def monitor_pico():
                         logger.error(f"Error parsing rotary angle: {e}")
                 
                 # Process authentication events
-                elif "ACCESS GRANTED" in line:
+                elif "TOUCH - SUCCESS" in line:
                     log_entry = {
                         'id': str(uuid.uuid4()),
                         'timestamp': datetime.now().isoformat(),
@@ -290,7 +312,7 @@ def monitor_pico():
                     auth_log_entries.append(log_entry)
                     save_logs(auth_log_entries)
                     socketio.emit('auth_event', log_entry)
-                    send_to_listener("SUCCESS") 
+                    send_to_listener("TOUCH - SUCCESS") 
                 
                 # Detect failed attempts
                 elif "timeout" in line or "Incorrect input" in line:
