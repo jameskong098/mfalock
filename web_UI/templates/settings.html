@@ -43,7 +43,18 @@
         <h3>Custom Unlock Pattern</h3>
         <form id="pattern-settings-form">
              <div class="form-group">
+                <!-- Display Current Pattern -->
+                <div id="current-pattern-display-container">
+                    <h4>Current Saved Pattern:</h4>
+                    <div id="current-pattern-steps" class="pattern-steps-visual-container">
+                        <!-- Loaded pattern will be displayed here by JS -->
+                        <p class="empty-pattern">Loading pattern...</p>
+                    </div>
+                </div>
+                <hr> 
+
                 <div id="pattern-recorder">
+                    <p><strong>Record New Pattern:</strong></p> 
                     <div id="pattern-sensor">
                         <div class="sensor-circle"></div>
                         <p>Tap or hold here to record your pattern</p>
@@ -55,8 +66,8 @@
                     </div>
 
                     <div id="pattern-steps-container">
-                        <h4>Current Pattern:</h4>
-                        <div id="pattern-steps" class="empty-pattern">No pattern recorded yet.</div>
+                        <h4>Recording Preview:</h4> 
+                        <div id="pattern-steps" class="empty-pattern pattern-steps-visual-container">No pattern recorded yet.</div> 
                     </div>
                 </div>
 
@@ -65,6 +76,7 @@
                 </div>
 
                 <div id="manual-pattern-container" style="display: none;">
+                     <p><strong>Manually Define New Pattern:</strong></p> 
                     <div id="pattern-container">
                         <!-- Manual steps will be added here by JS -->
                     </div>
