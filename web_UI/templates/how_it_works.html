@@ -3,53 +3,78 @@
 {% block content %}
 <section id="how-it-works">
     <div class="card">
-        <h2 class="section-title">How to Authenticate</h2>
-        <p>The MFA Lock uses a specific touch pattern for authentication. Follow these steps:</p>
-        
-        <div class="auth-method">
-            <div class="auth-step">
-                <div class="icon"><i class="fas fa-hand-pointer"></i><i class="fas fa-hand-pointer"></i></div>
-                <h3>Step 1</h3>
-                <p>Double tap the sensor quickly (within 500ms)</p>
-            </div>
-            <div class="auth-step">
-                <div class="icon"><i class="fas fa-hand-paper"></i></div>
-                <h3>Step 2</h3>
-                <p>Long press the sensor for at least 1 second</p>
-            </div>
-            <div class="auth-step">
-                <div class="icon"><i class="fas fa-hand-pointer"></i></div>
-                <h3>Step 3</h3>
-                <p>Single tap the sensor quickly</p>
-            </div>
-        </div>
-        
-        <div class="pattern-animation" id="pattern-demo">
-            <div class="sensor" id="touch-sensor"></div>
-        </div>
-        <button id="demo-button" style="padding: 8px 16px; background-color: var(--secondary-color); color: white; border: none; border-radius: 4px; cursor: pointer; margin: 10px 0;">Demonstrate Pattern</button>
+        <h2 class="section-title">System Overview</h2>
+        <p>
+            The MFA Lock utilizes multiple sensors connected to a Raspberry Pi Pico microcontroller. 
+            The system intelligently switches between active sensor modes based on user interaction. 
+            Authentication can be performed using either the touch sensor or the rotary angle sensor, depending on the configuration and detected activity.
+        </p>
+        <p>
+            The Pico monitors both sensors when idle. When significant activity is detected on one sensor (e.g., a touch or a turn of the dial), that sensor becomes 'active'. If there's no further interaction for a short period (around 5 seconds), the system returns to an 'idle' state, listening for input from either sensor again.
+        </p>
+        <p>
+            You can see the currently active sensor mode on the <a href="{{ url_for('dashboard') }}">Dashboard</a>.
+        </p>
     </div>
-    
+
+    <!-- Touch Sensor Section -->
     <div class="card">
-        <h2 class="section-title">System Information</h2>
-        <p>The MFA Lock uses a touch-sensitive mechanism connected to a Raspberry Pi Pico microcontroller. The system detects specific patterns of touches to grant access.</p>
+        <h2 class="section-title">Touch Sensor Authentication</h2>
+        <p>
+            A capacitive touch sensor allows authentication through a sequence of taps and holds. 
+            This pattern is customizable via the <a href="{{ url_for('settings_page') }}">Settings</a> page.
+        </p>
         
-        <div class="system-diagram">
-            <img src="{{ url_for('static', filename='images/touch_setup.png') }}" alt="Touch Sensor Wiring" style="max-width: 100%; height: auto;">
+        <!-- Technical Details -->
+        <div style="margin-top: 25px;">
+            <h3>Touch Sensor Details:</h3>
+            <div style="display: flex; align-items: flex-start; gap: 20px;">
+                <div class="system-diagram" style="flex: 0 0 150px;"> <!-- Adjust width as needed -->
+                     <img src="{{ url_for('static', filename='images/touch_setup.png') }}" alt="Touch Sensor Wiring Diagram" style="max-width: 100%; height: auto;">
+                </div>
+                <ul style="margin-left: 0; margin-top: 0; padding-left: 0; list-style: none; flex-grow: 1;">
+                    <li><strong>Type:</strong> Capacitive Touch Sensor</li>
+                    <li><strong>Connection:</strong> GPIO Pin 26</li>
+                    <li><strong>Function:</strong> Detects user presence (touch) and duration (tap vs. hold).</li>
+                    <li><strong>Debounce Time:</strong> ~50ms (Handled by microcontroller firmware to prevent false readings).</li>
+                </ul>
+            </div>
         </div>
+    </div>
+
+    <!-- Rotary Sensor Section -->
+    <div class="card">
+        <h2 class="section-title">Rotary Angle Sensor</h2>
+        <p>
+            A rotary angle sensor (potentiometer) allows for authentication or control based on rotation, similar to a combination lock. 
+            The system reads the angle of the dial (0-360 degrees). While full rotary-based authentication is still under development, the sensor is active and reports its angle.
+        </p>
         
-        <h3>Technical Specifications:</h3>
-        <ul style="margin-left: 20px; margin-top: 10px;">
-            <li>Microcontroller: Raspberry Pi Pico</li>
-            <li>Sensor: Capacitive touch sensor on GPIO pin 26</li>
-            <li>Debounce time: 50ms</li>
-            <li>Maximum tap interval: 500ms</li>
-            <li>Minimum hold duration: 1000ms</li>
-        </ul>
+        <!-- Technical Details -->
+         <div style="margin-top: 25px;">
+            <h3>Rotary Sensor Details:</h3>
+             <div style="display: flex; align-items: flex-start; gap: 20px;">
+                <div class="system-diagram" style="flex: 0 0 150px;"> <!-- Adjust width as needed -->
+                     <img src="{{ url_for('static', filename='images/rotary_angle_setup.png') }}" alt="Rotary Sensor Wiring Diagram" style="max-width: 100%; height: auto;">
+                </div>
+                <ul style="margin-left: 0; margin-top: 0; padding-left: 0; list-style: none; flex-grow: 1;">
+                    <li><strong>Type:</strong> Rotary Angle Sensor (Potentiometer)</li>
+                    <li><strong>Connection:</strong> ADC Pin 28</li>
+                    <li><strong>Function:</strong> Measures rotational position from 0 to 360 degrees.</li>
+                    <li><strong>Smoothing:</strong> Uses a moving average to stabilize readings.</li>
+                    <li><strong>Activation Threshold:</strong> Requires a change of ~10 degrees ([`ROTARY_CHANGE_THRESHOLD`](pico_sensors/all_sensors.py)) to activate rotary mode.</li>
+                </ul>
+            </div>
+        </div>
     </div>
 </section>
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/how_it_works.js') }}"></script>
+<!-- Include common.js if needed -->
+<script src="{{ url_for('static', filename='js/common.js') }}"></script> 
+<!-- Include settings.js for updatePatternStepsDisplay function -->
+<script src="{{ url_for('static', filename='js/settings.js') }}"></script> 
+<!-- Script for this page (handles pattern fetching and animation) -->
+<script src="{{ url_for('static', filename='js/how_it_works.js') }}"></script> 
 {% endblock %}
