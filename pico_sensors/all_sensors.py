@@ -56,28 +56,31 @@ rotary_buffer_size = 10
 rotary_readings = [0] * rotary_buffer_size
 rotary_index = 0
 
-def load_touch_pattern_from_file(filepath):
-    """Load the touch pattern from a JSON file"""
+# Path to the settings file on the Pico filesystem
+SETTINGS_FILE_PATH = "settings.json" 
+
+def load_touch_pattern_from_settings(filepath):
+    """Load the touch pattern from the settings JSON file"""
     try:
         # Check if file exists
         try:
             stat = os.stat(filepath)
             if stat[6] == 0:  # Size is 0
-                print(f"Pattern file is empty: {filepath}")
+                print(f"Settings file is empty: {filepath}")
                 return None
         except OSError:
-            print(f"Pattern file not found: {filepath}")
+            print(f"Settings file not found: {filepath}")
             return None
             
         # Open and read the file
         with open(filepath, 'r') as f:
-            data = json.load(f)
+            settings_data = json.load(f)
             
         # Extract pattern from the data
-        if 'pattern' in data and isinstance(data['pattern'], list) and len(data['pattern']) > 0:
+        if 'customPattern' in settings_data and isinstance(settings_data['customPattern'], list) and len(settings_data['customPattern']) > 0:
             # Convert the JSON format to tuple format
             pattern = []
-            for step in data['pattern']:
+            for step in settings_data['customPattern']:
                 if isinstance(step, dict) and 'action' in step and 'duration' in step:
                     pattern.append((step['action'], step['duration']))
             
@@ -85,44 +88,26 @@ def load_touch_pattern_from_file(filepath):
                 print(f"Loaded pattern from {filepath} with {len(pattern)} steps")
                 return pattern
                 
-        print("No valid pattern found in file")
+        print("No valid 'customPattern' found in settings file")
         return None
     except Exception as e:
-        print(f"Error loading pattern from file: {e}")
+        print(f"Error loading pattern from settings file: {e}")
         return None
 
 def initialize_touch_sensor():
-    """Load touch sensor pattern and initialize variables"""
+    """Load touch sensor pattern from settings.json and initialize variables"""
     global custom_pattern
     
-    # Priority 1: Try to load from custom_pattern.json
-    pattern_file_path = "custom_pattern.json"
-    file_pattern = load_touch_pattern_from_file(pattern_file_path)
-    if file_pattern:
-        custom_pattern = file_pattern
-        print("Using pattern from custom_pattern.json")
-
-    # Priority 2: Check if a custom pattern was provided as an argument
-    if len(sys.argv) > 1:
-        try:
-            pattern_arg = sys.argv[1]
-            pattern_data = json.loads(pattern_arg)
-            
-            if isinstance(pattern_data, list):
-                arg_pattern = []
-                for step in pattern_data:
-                    if isinstance(step, dict) and "action" in step and "duration" in step:
-                        arg_pattern.append((step["action"], step["duration"]))
-                
-                if arg_pattern:
-                    custom_pattern = arg_pattern
-                    print(f"Using provided command-line pattern with {len(custom_pattern)} steps")
-                
-        except Exception as e:
-            print(f"Error parsing pattern argument: {e}")
-            
-    if custom_pattern == DEFAULT_PATTERN:
-        print("Using built-in default pattern")
+    # Try to load from settings.json
+    settings_pattern = load_touch_pattern_from_settings(SETTINGS_FILE_PATH)
+    
+    if settings_pattern:
+        custom_pattern = settings_pattern
+        print(f"Using pattern from {SETTINGS_FILE_PATH}")
+    else:
+        # Fallback to default if settings file is missing, empty, or invalid
+        custom_pattern = DEFAULT_PATTERN
+        print(f"Could not load pattern from {SETTINGS_FILE_PATH}. Using built-in default pattern.")
 
     print(f"Active pattern: {custom_pattern}")
 
