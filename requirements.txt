@@ -1,8 +1,6 @@
 flask==3.1.0
 flask-socketio==5.5.1
 pyserial==3.5
-opencv-python
-face_recognition
 vosk
 sounddevice
 mpremote==1.24.1
