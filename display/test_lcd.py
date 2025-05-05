@@ -5,7 +5,30 @@ import time
 import os
 import subprocess
 import socketio
+import sys 
+from dotenv import load_dotenv 
 # pip install "python-socketio[client]"
+
+# Load environment variables from .env file in the root directory
+dotenv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')
+if os.path.exists(dotenv_path):
+    load_dotenv(dotenv_path=dotenv_path, override=True)
+    print(f"Loaded environment variables from: {dotenv_path}")
+else:
+    print(f".env file not found at: {dotenv_path}")
+
+# --- Configuration ---
+# Get the Web Server IP (which hosts the Socket.IO server) from environment variables
+# Assuming the web server runs on the same machine defined by ALLOWED_WEB_SERVER_IP in .env
+SOCKET_SERVER_IP = os.getenv("ALLOWED_WEB_SERVER_IP") # Use the IP for the web server device
+SOCKET_SERVER_PORT = int(os.getenv("LISTENER_PI_PORT", 8080)) # Use the same port
+
+# Check if the environment variable was loaded
+if SOCKET_SERVER_IP is None:
+    print("Error: ALLOWED_WEB_SERVER_IP environment variable not set in .env.")
+    print("Please define ALLOWED_WEB_SERVER_IP in your .env file.")
+    sys.exit(1)
+# --- End Configuration ---
 
 
 # Display setup
@@ -236,9 +259,18 @@ display.set_led(0.05, 0.05, 0.05)
 
 sio = socketio.Client()
 try:
-    sio.connect("http://<YOUR_SOCKET_SERVER_IP>:PORT")  # Replace with actual IP and port
+    # Use the loaded IP and Port
+    socket_url = f"http://{SOCKET_SERVER_IP}:{SOCKET_SERVER_PORT}"
+    print(f"Attempting to connect to Socket.IO server at: {socket_url}")
+    sio.connect(socket_url)
+    print("Socket.IO connection successful.")
+except socketio.exceptions.ConnectionError as e:
+    print(f"Socket.IO connection failed: {e}")
+    # Optionally decide if the program should exit or continue without socket connection
+    # sys.exit(1) # Uncomment to exit if connection fails
 except Exception as e:
-    print("Socket connection failed:", e)
+    print(f"An unexpected error occurred during Socket.IO connection: {e}")
+    # sys.exit(1) # Uncomment to exit on other errors
 
 # Draw the initial screen (set password)
 draw_set_password_screen()

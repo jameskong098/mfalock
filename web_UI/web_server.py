@@ -29,7 +29,7 @@ from dotenv import load_dotenv
 # Load environment variables from .env file in the root directory
 dotenv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')
 if os.path.exists(dotenv_path):
-    load_dotenv(dotenv_path=dotenv_path)
+    load_dotenv(dotenv_path=dotenv_path, override=True)
     print(f"Loaded environment variables from: {dotenv_path}")
 else:
     print(f".env file not found at: {dotenv_path}")
@@ -92,6 +92,18 @@ def handle_auth_event(data):
     if data.get('method') == 'Rotary Lock' and data.get('status') == 'success':
         logger.info("Detected successful rotary authentication, sending to listener.")
         send_to_listener("ROTARY - SUCCESS")
+    # Check if it's a successful face authentication and send to listener
+    elif data.get('method') == 'Facial Recognition' and data.get('status') == 'success':
+        logger.info("Detected successful facial recognition authentication, sending to listener.")
+        send_to_listener("FACIAL RECOGNITION - SUCCESS")
+    # Check if it's a successful face authentication and send to listener
+    elif data.get('method') == 'Voice Recognition' and data.get('status') == 'success':
+        logger.info("Detected successful voice recognition authentication, sending to listener.")
+        send_to_listener("VOICE RECOGNITION - SUCCESS")
+    # Check if it's a successful face authentication and send to listener
+    elif data.get('method') == 'Keypad' and data.get('status') == 'success':
+        logger.info("Detected successful keypad authentication, sending to listener.")
+        send_to_listener("KEYPAD - SUCCESS")
 
 def load_logs():
     """Load logs from the log file."""
@@ -400,49 +412,77 @@ def pico_connection_thread():
             logger.info("Pico connected. Setting up all sensors...")
             if check_and_copy_all_sensors():
                 try:
-                    # Check if a custom pattern file exists and copy it to the Pico
-                    pattern_file_path = os.path.join(
-                        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                        "touch",
-                        "custom_pattern.json"
-                    )
-                    
-                    if os.path.exists(pattern_file_path):
-                        logger.info("Found existing custom pattern file, copying to Pico...")
+                    # Copy the settings file to the Pico during initial setup
+                    settings_host_path = os.path.join(BASE_DIR, SETTINGS_FILE_PATH)
+                    if os.path.exists(settings_host_path):
+                        logger.info(f"Copying initial {SETTINGS_FILE_PATH} to Pico...")
                         copy_result = subprocess.run(
-                            ["mpremote", "cp", pattern_file_path, ":custom_pattern.json"],
+                            ["mpremote", "cp", settings_host_path, f":{SETTINGS_FILE_PATH}"],
                             capture_output=True,
-                            text=True
+                            text=True,
+                            timeout=10
                         )
-                        
                         if copy_result.returncode == 0:
-                            logger.info("Successfully copied custom pattern file to Pico")
+                            logger.info(f"Successfully copied {SETTINGS_FILE_PATH} to Pico.")
                         else:
-                            logger.error(f"Failed to copy custom pattern file: {copy_result.stderr}")
+                            logger.error(f"Failed to copy {SETTINGS_FILE_PATH}: {copy_result.stderr}")
                     else:
-                        logger.info("No custom pattern file found, Pico will use default pattern")
-                    
+                        logger.warning(f"Initial {SETTINGS_FILE_PATH} not found at {settings_host_path}. Pico might use defaults.")
+
                     # Create a launcher script that runs all_sensors in the background
-                    pattern_json = json.dumps(settings['customPattern'])
+                    # No need to pass pattern here, it reads from settings.json on Pico
                     launcher_script = (
-                        f'import _thread\n'
-                        f'import json\n'
-                        f'pattern_arg = \'{pattern_json}\'\n'
-                        f'def run_all_sensors(arg):\n'
-                        f'    all_sensors = __import__("all_sensors", None, None, [], 0)\n'
-                        f'    all_sensors.main()\n'
-                        f'try: _thread.start_new_thread(run_all_sensors, (pattern_arg,))\n'
-                        f'except Exception as e: print("Error starting run_all_sensors", e)'
+                        f'import _thread, gc, sys\n'
+                        f'gc.collect()\n'
+                        f'# Minimal module cleanup\n'
+                        f'for name in list(sys.modules):\n'
+                        f'    if name not in ("gc", "sys", "_thread", "micropython", "uctypes", "array", "rp2"):\n'
+                        f'        try: del sys.modules[name]\n'
+                        f'        except KeyError: pass\n'
+                        f'gc.collect()\n'
+                        f'def run_all_sensors():\n'
+                        f'    try:\n'
+                        f'        print("Importing all_sensors...")\n'
+                        f'        all_sensors = __import__("all_sensors")\n'
+                        f'        print("Running all_sensors.main()...")\n'
+                        f'        all_sensors.main()\n'
+                        f'        print("all_sensors.main() finished.")\n'
+                        f'    except Exception as e:\n'
+                        f'        print(f"Error in run_all_sensors: {{e}}")\n'
+                        f'try:\n'
+                        f'    print("Starting thread for run_all_sensors...")\n'
+                        f'    _thread.start_new_thread(run_all_sensors, (()))\n'
+                        f'    print("Thread started.")\n'
+                        f'except Exception as e:\n'
+                        f'    print(f"Error starting thread: {{e}}")\n'
                     )
-                    
+
                     logger.info("Creating background job to run all_sensors")
-                    subprocess.run(["mpremote", "exec", launcher_script], check=True, timeout=2)
-                    
-                    
-                    logger.info("Starting to monitor Pico output...")
-                    monitor_pico()
+                    # Execute the launcher script
+                    exec_result = subprocess.run(
+                        ["mpremote", "exec", launcher_script],
+                        capture_output=True, text=True, timeout=5
+                    )
+                    logger.info(f"Launcher script stdout: {exec_result.stdout}")
+                    if exec_result.stderr:
+                         logger.error(f"Launcher script stderr: {exec_result.stderr}")
+
+                    if "Thread started." in exec_result.stdout and not exec_result.stderr:
+                         logger.info("Successfully started all_sensors.py via launcher script.")
+                         logger.info("Starting to monitor Pico output...")
+                         monitor_pico() # Start monitoring
+                    else:
+                         logger.error("Failed to start all_sensors.py cleanly via launcher.")
+                         # Handle failure, maybe set pico_connected to False
+                         pico_connected = False
+                         socketio.emit('status_update', {'pico_connected': False})
+
+                except subprocess.TimeoutExpired:
+                    logger.error("Timeout occurred during initial Pico setup (copying files or starting script).")
+                    pico_connected = False
+                    socketio.emit('status_update', {'pico_connected': False})
                 except Exception as e:
-                    logger.error(f"Failed to start all sensors program: {e}")
+                    logger.error(f"Failed during initial Pico setup: {e}")
                     pico_connected = False
                     socketio.emit('status_update', {
                         'pico_connected': False,

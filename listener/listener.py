@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 
 dotenv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')
 if os.path.exists(dotenv_path):
-    load_dotenv(dotenv_path=dotenv_path)
+    load_dotenv(dotenv_path=dotenv_path, override=True)
     print(f"Loaded environment variables from: {dotenv_path}") 
 else:
     print(f".env file not found at: {dotenv_path}") 
