@@ -18,7 +18,6 @@ import json
 import threading
 import logging
 import subprocess
-import paramiko
 from datetime import datetime
 from flask import Flask, render_template, jsonify, request, send_file
 from flask_socketio import SocketIO, emit
