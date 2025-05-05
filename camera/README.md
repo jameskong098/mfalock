@@ -34,7 +34,7 @@ sudo apt install -y \
 
 5. Install displayhatmini
 ``` bash 
-    sudo pip3 install displayhatmini
+    pip install displayhatmini
 ```
 
 6. Install Picamera2 (for capturing frames
