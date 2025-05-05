@@ -226,8 +226,10 @@ def start_facial_recognition(script_path="/path/to/your/facialrecognition.py", t
         str: "SUCCESS", "FAILURE", or "TIMEOUT"
     """
     try:
+        # Pass the path to imagelist.txt as a command-line argument to the script
+        imagelist_path = "/Users/yunuskocaman/MFA LOCK/mfalock/camera/faces/imagelist.txt"
         face_process = subprocess.Popen(
-            ["python3", script_path],
+            ["python3", script_path, "--imagelist", imagelist_path],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True
@@ -297,6 +299,8 @@ while True:
             elif selected == "Keypad Authentication":
                 current_screen = "keypad"
                 draw_keypad_screen()
+
+                
             elif selected == "Facial Recognition":
                 current_screen = "facial_recognition"
                 draw_facial_recognition_screen()
@@ -399,6 +403,35 @@ while True:
             else:
                 if len(entered_digits) < 4:
                     entered_digits += selected_digit
+
+                    if len(entered_digits) == 4:
+                        if entered_digits == user_password:
+                            print("Keypad Authentication Successful")
+                            draw_facial_recognition_success_screen()  # or your custom success screen
+                            sio.emit('auth_event', {
+                                'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+                                'status': 'success',
+                                'message': 'Access granted: Keypad match',
+                                'method': 'Keypad Authentication',
+                                'user': 'User',
+                                'location': 'Main Entrance',
+                                'details': 'Correct PIN entered'
+                            })
+                        else:
+                            print("Keypad Authentication Failed")
+                            draw_error_screen("Incorrect PIN")
+                            sio.emit('auth_event', {
+                                'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+                                'status': 'failure',
+                                'message': 'Access denied: Wrong PIN',
+                                'method': 'Keypad Authentication',
+                                'user': 'User',
+                                'location': 'Main Entrance',
+                                'details': 'Wrong PIN entered'
+                            })
+                        # Reset input after checking
+                        time.sleep(2)
+                        entered_digits = ""
             draw_keypad_screen()
             time.sleep(0.2)
 
