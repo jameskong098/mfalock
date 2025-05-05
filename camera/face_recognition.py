@@ -5,7 +5,7 @@ from picamera2 import Picamera2
 import numpy as np
 import os
 
-def detect_known_face(image_list_path="imagelist.txt", blacklist_path="blacklist.txt", timeout=30):
+def detect_known_face(image_list_path="imagelist.txt", timeout=30):
     """
     Run face recognition without displaying anything.
     Returns True if any known face is detected, False if blacklisted face is detected,
