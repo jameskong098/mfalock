@@ -226,8 +226,10 @@ def start_facial_recognition(script_path="/path/to/your/facialrecognition.py", t
         str: "SUCCESS", "FAILURE", or "TIMEOUT"
     """
     try:
+        # Pass the path to imagelist.txt as a command-line argument to the script
+        imagelist_path = "/Users/yunuskocaman/MFA LOCK/mfalock/camera/faces/imagelist.txt"
         face_process = subprocess.Popen(
-            ["python3", script_path],
+            ["python3", script_path, "--imagelist", imagelist_path],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True
