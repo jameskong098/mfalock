@@ -9,7 +9,7 @@ This guide documents how to replicate a Raspberry Pi-based smart lock project th
 
 ## 🧱 Hardware Required
 
-- 2 × Raspberry Pi 4 (or compatible)
+- 2 × Raspberry Pi 5 (or compatible)
 - 2 × Raspberry Pi Pico
 - 1 × Display HAT Mini (Waveshare or Pimoroni)
 - 1 × Raspberry Pi Camera or USB webcam
@@ -24,6 +24,8 @@ This guide documents how to replicate a Raspberry Pi-based smart lock project th
 ---
 
 ## 💻 System Setup
+
+**IMPORTANT:** These steps must be completed *before* installing packages from the main `requirements.txt` in the project root. The dependencies for camera access and facial recognition (`dlib`, `face_recognition`, `libcamera`) can have complex build requirements and may conflict if installed later.
 
 ### 1. Install System Packages
 

@@ -138,7 +138,10 @@ A sequence of colors/angles selected using the rotary angle sensor connected to 
 ## Setup & Running
 
 1.  **Hardware:** Connect sensors, Picos, and Pis as described in the Architecture section and component READMEs (`pico_sensors/`, `web_UI/`, `listener/`).
-2.  **Software Dependencies:** Install Python packages from `requirements.txt` on both Raspberry Pis. Install system dependencies (like PortAudio for `sounddevice`) if needed. Install `mpremote` on both Pis.
+2.  **Software Dependencies:**
+    *   **IMPORTANT:** First, follow the setup instructions in [camera/README.md](./camera/README.md) to correctly install dependencies for the camera and facial recognition, especially `dlib` and `face_recognition`. These can have complex build requirements.
+    *   After completing the camera setup, install the remaining Python packages from `requirements.txt` on both Raspberry Pis: `pip install -r requirements.txt`.
+    *   Install system dependencies (like PortAudio for `sounddevice`) if needed. Install `mpremote` on both Pis.
 3.  **Pico Code:** Upload `pico_sensors/all_sensors.py` to the Pico connected to Pi 1. Upload `pico_sensors/servo_motor/servo.py` (or ensure the listener copies it) to the Pico connected to Pi 2.
 4.  **Configuration:** Create a `.env` file in the project root (`mfalock/`) on *both* Raspberry Pis. Configure `LISTENER_PI_IP`, `LISTENER_PORT`, and `ALLOWED_WEB_SERVER_IP` correctly based on your network setup. See `web_UI/README.md` and `listener/README.md` for details.
 5.  **Run Listener (Pi 2):** Navigate to `listener/` and run `python listener.py`. Keep it running.
