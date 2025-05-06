@@ -5,8 +5,9 @@ import time
 import os
 import subprocess
 import socketio
-import sys 
-from dotenv import load_dotenv 
+import sys
+import json 
+from dotenv import load_dotenv
 # pip install "python-socketio[client]"
 
 # Load environment variables from .env file in the root directory
@@ -30,6 +31,14 @@ if SOCKET_SERVER_IP is None:
     sys.exit(1)
 # --- End Configuration ---
 
+# --- Settings File Path ---
+# Calculate the path to settings.json relative to this script
+script_dir = os.path.dirname(__file__)
+project_root = os.path.dirname(script_dir) # Go up one level from 'display'
+settings_file_path = os.path.join(project_root, 'web_UI', 'settings.json')
+print(f"Settings file path: {settings_file_path}")
+# --- End Settings File Path ---
+
 
 # Display setup
 width = DisplayHATMini.WIDTH
@@ -41,6 +50,7 @@ display = DisplayHATMini(buffer)
 font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 16)
 # used for keypad authentication
 password_Set = False
+user_password = "" 
 
 # Keypad config (flattened index-based navigation)
 # Bottom row includes 'Del' for backspace next to '0'
@@ -60,7 +70,8 @@ entered_digits = ""
 # App state
 system_locked = False
 # Possible screens: "set_password", "confirm", "home", "lock", "keypad"
-current_screen = "set_password"  # Start at password setup
+# Initial screen determined after loading settings
+current_screen = "home" # Default to home, will change if password needed
 
 menu_options = [
     "Facial Recognition",
@@ -74,9 +85,67 @@ menu_index = 0
 
 # Confirmation prompt tracking
 confirm_index = 0  # 0 = "Go Back", 1 = "Confirm"
-user_password = ""  # Will hold the confirmed password after setup
+# --- Password Persistence Functions ---
+def load_password_from_settings():
+    """Loads the keypad password from settings.json."""
+    global user_password, password_Set, current_screen
+    try:
+        if os.path.exists(settings_file_path):
+            with open(settings_file_path, 'r') as f:
+                settings_data = json.load(f)
+                loaded_password = settings_data.get("keypad_password")
+                if loaded_password and len(loaded_password) == 4:
+                    user_password = loaded_password
+                    password_Set = True
+                    print(f"Loaded password from settings: {user_password}")
+                    current_screen = "home" # Start at home if password exists
+                    return True
+                else:
+                    print("No valid password found in settings.json or password length is not 4.")
+                    current_screen = "set_password" # Force setup if invalid
+        else:
+            print(f"Settings file not found at {settings_file_path}. User needs to set a password.")
+            current_screen = "set_password" # Force setup if file missing
+    except (json.JSONDecodeError, IOError) as e:
+        print(f"Error loading settings: {e}. User needs to set a password.")
+        current_screen = "set_password" # Force setup on error
+    except Exception as e:
+        print(f"An unexpected error occurred loading settings: {e}")
+        current_screen = "set_password" # Force setup on unexpected error
 
+    password_Set = False
+    user_password = ""
+    return False
 
+def save_password_to_settings(new_password):
+    """Saves the keypad password to settings.json."""
+    settings_data = {}
+    try:
+        # Load existing settings first to avoid overwriting other keys
+        if os.path.exists(settings_file_path):
+            with open(settings_file_path, 'r') as f:
+                try:
+                    settings_data = json.load(f)
+                except json.JSONDecodeError:
+                    print("Warning: settings.json is corrupted. Creating a new one.")
+                    settings_data = {} # Start fresh if corrupted
+
+        settings_data["keypad_password"] = new_password
+
+        # Ensure the directory exists before writing
+        os.makedirs(os.path.dirname(settings_file_path), exist_ok=True)
+
+        with open(settings_file_path, 'w') as f:
+            json.dump(settings_data, f, indent=4)
+        print(f"Password saved to {settings_file_path}")
+        return True
+    except (IOError, OSError) as e:
+        print(f"Error saving settings: {e}")
+        return False
+    except Exception as e:
+        print(f"An unexpected error occurred saving settings: {e}")
+        return False
+# --- End Password Persistence Functions ---
 
 
 def draw_home_screen():
@@ -302,9 +371,18 @@ except Exception as e:
     print(f"An unexpected error occurred during Socket.IO connection: {e}")
     # sys.exit(1) # Uncomment to exit on other errors
 
-# Draw the initial screen (set password)
-draw_set_password_screen()
+# --- Load Password and Set Initial Screen ---
+load_password_from_settings()
+# --- End Load Password ---
 
+# Draw the initial screen based on whether password needs setting
+if current_screen == "set_password":
+    draw_set_password_screen()
+elif current_screen == "home":
+    draw_home_screen()
+# Add other initial screen draws if necessary (e.g., lock screen)
+else:
+    draw_home_screen() # Default fallback
 
 
 while True:
@@ -533,15 +611,23 @@ while True:
         elif display.read_button(display.BUTTON_B):  # Choose "Go Back" or "Confirm"
             if confirm_index == 1:
                 # "Confirm" selected
-                user_password = entered_digits
+                user_password = entered_digits 
                 print("Password set to:", user_password)
-                #used to determine if password is beng entered in keypad authenitcation               
-                password_Set = True
-                # Reset for normal usage
-                entered_digits = ""
-                keypad_index = 0
-                current_screen = "home"
-                draw_home_screen()
+                # Save the new password to settings.json
+                if save_password_to_settings(user_password):
+                    password_Set = True # Mark password as set
+                    # Reset for normal usage
+                    entered_digits = ""
+                    keypad_index = 0
+                    current_screen = "home"
+                    draw_home_screen()
+                else:
+                    # Handle save error - maybe show an error screen?
+                    draw_error_screen("Failed to save password!")
+                    # Go back to set password screen or stay on confirm?
+                    current_screen = "set_password"
+                    draw_set_password_screen()
+
             else:
                 # "Go Back" selected
                 current_screen = "set_password"
