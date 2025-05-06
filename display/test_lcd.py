@@ -235,20 +235,10 @@ def start_facial_recognition(script_path="/path/to/your/facialrecognition.py", t
     Returns:
         str: "SUCCESS", "FAILURE", or "TIMEOUT"
     """
-    try:
-        # Pass the path to imagelist.txt as a command-line argument to the script
-        # Get the project root directory and construct the path to imagelist.txt
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-        imagelist_path = os.path.join(project_root, "camera", "faces", "imagelist.txt")
-        
-        # Check if the file exists
-        if not os.path.exists(imagelist_path):
-            print(f"Warning: imagelist.txt not found at {imagelist_path}")
-            return "FAILURE"
-            
+    try:            
         # Start the facial recognition process
         face_process = subprocess.Popen(
-            ["python3", script_path, "--imagelist", imagelist_path],
+            ["python3", script_path, "--imagelist", script_path],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True
@@ -326,7 +316,17 @@ while True:
                 time.sleep(1)  # Give 1 second to show loading screen
 
                 # Start facial recognition and capture result
-                result = start_facial_recognition("/path/to/your/facialrecognition.py")
+                # Pass the path to the script and imagelist.txt
+                project_root = os.path.dirname(os.path.dirname(__file__))
+                script_path = os.path.join(project_root, "camera", "face_recognition.py")
+                imagelist_path = os.path.join(project_root, "camera", "faces", "imagelist.txt")
+                
+                # Check if the file exists
+                if not os.path.exists(imagelist_path):
+                    print(f"Warning: imagelist.txt not found at {imagelist_path}")
+                    result = "FAILURE"
+                else:
+                    result = start_facial_recognition(script_path, 30)
 
                 if result == "SUCCESS":
                     draw_facial_recognition_success_screen()
