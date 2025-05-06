@@ -415,7 +415,7 @@ while True:
                 # Start facial recognition and capture result
                 # Pass the path to the script and imagelist.txt
                 project_root = os.path.dirname(os.path.dirname(__file__))
-                script_path = os.path.join(project_root, "camera", "face_recognition.py")
+                script_path = os.path.join(project_root, "camera", "face_recognition_code.py")
                 imagelist_path = os.path.join(project_root, "camera", "faces", "imagelist.txt")
                 
                 # Check if the file exists
