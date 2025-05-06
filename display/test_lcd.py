@@ -224,7 +224,7 @@ def draw_facial_recognition_success_screen():
     display.display()
 
 # --- Facial Recognition Starter Function ---
-def start_facial_recognition(script_path, timeout=30):
+def start_facial_recognition(script_path, imagelist_path timeout=30):
     """
     Starts facial recognition script, captures the result (SUCCESS or FAILURE).
 
@@ -326,7 +326,7 @@ while True:
                     print(f"Warning: imagelist.txt not found at {imagelist_path}")
                     result = "FAILURE"
                 else:
-                    result = start_facial_recognition(script_path, 30)
+                    result = start_facial_recognition(script_path,imagelist_path 30)
 
                 if result == "SUCCESS":
                     draw_facial_recognition_success_screen()
