@@ -104,6 +104,17 @@ def handle_auth_event(data):
         logger.info("Detected successful keypad authentication, sending to listener.")
         send_to_listener("KEYPAD - SUCCESS")
 
+# --- ADDITION: Handle voice phrase updates from display script ---
+@socketio.on('voice_phrase_update')
+def handle_voice_phrase(data):
+    """Receives the voice phrase from the display script and broadcasts it to web clients."""
+    phrase = data.get('phrase', '')
+    logger.info(f"Received voice phrase update: '{phrase}'")
+    # Broadcast the phrase to all connected web clients
+    socketio.emit('display_voice_phrase', {'phrase': phrase})
+    logger.info(f"Broadcasted phrase '{phrase}' to web clients.")
+# --- END ADDITION ---
+
 def load_logs():
     """Load logs from the log file."""
     if os.path.exists(LOG_FILE_PATH):

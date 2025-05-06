@@ -230,6 +230,20 @@ document.addEventListener('DOMContentLoaded', function() {
         socket.on('touch_event', function(data) {
             updateLiveTouchSensor(data.action);
         });
+
+        // --- ADDITION: Listen for voice phrase updates ---
+        socket.on('display_voice_phrase', function(data) {
+            const phraseDisplay = document.getElementById('voice-phrase-display');
+            const voiceStatus = document.getElementById('voice-status'); // Optional status display
+            if (phraseDisplay) {
+                phraseDisplay.textContent = data.phrase || 'Waiting for phrase...'; // Display phrase or default text
+            }
+            // Optionally clear or update a status message related to voice
+            if (voiceStatus) {
+                voiceStatus.textContent = data.phrase ? 'Listening...' : ''; // Example status update
+            }
+        });
+        // --- END ADDITION ---
     }
 
     // Rotary reset button handler
@@ -297,22 +311,29 @@ function addEventToList(event) {
 function updateSensorModeUI(mode) {
     const touchMethodElem = document.getElementById('touch-method');
     const rotaryMethodElem = document.getElementById('rotary-method');
-    if (touchMethodElem && rotaryMethodElem) {
-        if (mode === 'touch') {
-            touchMethodElem.classList.add('active');
-            rotaryMethodElem.classList.remove('active');
-            document.querySelectorAll('.touch-display').forEach(el => el.style.display = 'block');
-            document.querySelectorAll('.rotary-instructions').forEach(el => el.style.display = 'none');
-        } else if (mode === 'rotary') {
-            touchMethodElem.classList.remove('active');
-            rotaryMethodElem.classList.add('active');
-            document.querySelectorAll('.touch-display').forEach(el => el.style.display = 'none');
-            document.querySelectorAll('.rotary-instructions').forEach(el => el.style.display = 'block');
-        } else {
-            touchMethodElem.classList.remove('active');
-            rotaryMethodElem.classList.remove('active');
-        }
+    const voiceMethodElem = document.getElementById('voice-method'); // Added Voice element
+    const touchDisplay = document.querySelectorAll('.touch-display');
+    const rotaryDisplay = document.querySelectorAll('.rotary-instructions');
+    const voiceDisplay = document.querySelectorAll('.voice-recognition-display'); // Added Voice display
+
+    // Deactivate all method indicators first
+    [touchMethodElem, rotaryMethodElem, voiceMethodElem].forEach(el => el?.classList.remove('active'));
+    // Hide all specific displays
+    [touchDisplay, rotaryDisplay, voiceDisplay].forEach(nodes => nodes.forEach(el => el.style.display = 'none'));
+
+    if (mode === 'touch') {
+        touchMethodElem?.classList.add('active');
+        touchDisplay.forEach(el => el.style.display = 'block');
+    } else if (mode === 'rotary') {
+        rotaryMethodElem?.classList.add('active');
+        rotaryDisplay.forEach(el => el.style.display = 'block');
+    } else if (mode === 'voice_recognition') { // Added condition for voice
+        voiceMethodElem?.classList.add('active');
+        voiceDisplay.forEach(el => el.style.display = 'block');
+    } else {
+        // Default to idle or handle other modes
     }
+
     const sensorModeIndicator = document.getElementById('current-sensor-mode');
     if (sensorModeIndicator) {
         sensorModeIndicator.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);

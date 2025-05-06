@@ -60,38 +60,82 @@ stream = sd.InputStream(
 try:
     stream.start()
     phrase = gen_phrase(5)
-    print(f"Listening... Say this phrase: {phrase}!")
-    print(sd.query_devices())
+    # Output the phrase in a specific format for parsing
+    print(f"PHRASE: {phrase}")
+    # print(sd.query_devices()) # Optional: Keep for debugging if needed
     start_time = time.time()
+    recognized_text = ""
+    final_result_reported = False # Flag to ensure only one final result is printed
+
     while True:
-        if time.time() - start_time > timeout:
-            print("Timeout reached. Try again.")
-            logging.info("Authentication TIMED OUT.")
+        current_time = time.time()
+        if current_time - start_time > timeout:
+            if not final_result_reported:
+                print("VOICE - TIMEOUT") # Use specific output for timeout
+                logging.info("Authentication TIMED OUT.")
+                final_result_reported = True
             break
 
         try:
-            data = q.get(timeout=1)
+            data = q.get(timeout=0.5) # Shorter timeout for queue get
             if recognizer.AcceptWaveform(data.tobytes()):
                 result = json.loads(recognizer.Result())  # Convert JSON output to dict
                 text = result.get("text", "")  # Extract recognized text
                 if text:
-                    print(f"You said: {text}")
+                    recognized_text = text # Store the last recognized text
+                    print(f"You said: {text}") # Keep this for logging/debugging
                     logging.info(f"Recognized: '{text}'")
                     if text.lower() == phrase.lower():
-                        print("Correct... Opening!!!")
-                        logging.info("Authentication SUCCESSFUL.")
-                        break
-                else:
-                    print("Could not recognize speech. Try again.")
+                        if not final_result_reported:
+                            print("VOICE - SUCCESS")
+                            logging.info("Authentication SUCCESSFUL.")
+                            final_result_reported = True
+                        break # Exit loop on success
+                    # else: # Don't immediately print failure, wait for timeout or final result
+                    #     print("VOICE - FAILURE") # Avoid printing failure on intermediate results
+            # else:
+                # Partial results can be accessed here if needed
+                # partial_result = json.loads(recognizer.PartialResult())
+                # print(f"Partial: {partial_result.get('partial', '')}")
+                # pass
+
         except queue.Empty:
+            # No data in the queue, continue loop check timeout
             continue
+        except Exception as e:
+            logging.error(f"Error during recognition loop: {e}")
+            if not final_result_reported:
+                print("VOICE - ERROR") # Indicate an error occurred
+                final_result_reported = True
+            break
+
+    # After loop finishes (timeout, success, or error), check if success was achieved
+    if not final_result_reported:
+        if recognized_text.lower() == phrase.lower():
+             # This case should ideally be caught inside the loop, but as a fallback
+             print("VOICE - SUCCESS")
+             logging.info("Authentication SUCCESSFUL.")
+        else:
+             print("VOICE - FAILURE") # Print failure if loop ended without success
+             logging.info(f"Authentication FAILED. Expected '{phrase}', Got '{recognized_text}'")
 
 except KeyboardInterrupt:
     print("Interrupted by user.")
     logging.warning("Authentication INTERRUPTED by user.")
+    print("VOICE - FAILURE") # Treat interrupt as failure
+
+except Exception as e:
+    logging.error(f"An error occurred: {e}")
+    print(f"An error occurred: {e}")
+    print("VOICE - ERROR") # Indicate a script-level error
 
 finally:
     print(" Stopping...")
-    stream.stop()
-    stream.close()
+    if 'stream' in locals() and stream:
+        try:
+            stream.stop()
+            stream.close()
+        except Exception as e:
+            logging.error(f"Error closing stream: {e}")
+    print("Stream closed.")
 
