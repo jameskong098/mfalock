@@ -30,3 +30,37 @@ Can't uninstall 'lgpio'. No files were found to uninstall.
 
 ```bash
 sudo apt remove --purge python3-lgpio
+```
+
+## LCD Control Script (`test_lcd.py`)
+
+The `test_lcd.py` script is designed to manage the Display HAT Mini, providing a user interface for authentication method selection and execution.
+
+### Key Functionalities
+
+*   UI navigation using Display HAT Mini buttons (A, B, X, Y).
+*   Initial password setup for keypad authentication, stored in `web_UI/settings.json`.
+*   Selection and initiation of authentication methods:
+    *   Facial Recognition (invokes `camera/face_recognition_code.py`).
+    *   Voice Recognition (invokes `audio/utils/audio_utils.py`).
+    *   Keypad Authentication (on-device PIN entry).
+    *   Placeholders/messages for Touch and Rotary (as these are handled by Pico via `web_server.py`).
+*   Displaying results (success, failure, timeout, error) for each method.
+*   Socket.IO communication with `web_server.py` to:
+    *   Send authentication results (`auth_event`).
+    *   Update the web UI on the current LCD mode (`lcd_mode_update`).
+    *   Send keypad digits (`keypad_update`).
+    *   Send the voice recognition challenge phrase (`voice_phrase_update`) to the web UI.
+    *   Clear the voice phrase on the web UI.
+
+### Running the Script
+
+To run the script, use the following command:
+
+```bash
+python display/test_lcd.py
+```
+
+### Configuration Dependencies
+
+The script relies on environment variables (e.g., `ALLOWED_WEB_SERVER_IP`, `LISTENER_PI_PORT`) defined in the root `.env` file for Socket.IO connection. It also interacts with `web_UI/settings.json` for keypad password storage.
