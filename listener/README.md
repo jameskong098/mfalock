@@ -69,7 +69,7 @@ You also need to ensure the `ALLOWED_WEB_SERVER_IP` in `listener.py` matches the
 ## Pico Setup
 
 - Flash or run `servo_lock.py` on your Pico. It will listen for `lock` and `unlock` commands over USB serial.
-- The Pico should be connected to the listener Pi via USB before starting the listener.
+- The Pico should be connected to the listener Pi via USB on `GPIO26` (`A0` on Pico Shield) before starting the listener.
 
 ## Running the Listener
 
