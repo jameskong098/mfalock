@@ -237,7 +237,16 @@ def start_facial_recognition(script_path="/path/to/your/facialrecognition.py", t
     """
     try:
         # Pass the path to imagelist.txt as a command-line argument to the script
-        imagelist_path = "/Users/yunuskocaman/MFA LOCK/mfalock/camera/faces/imagelist.txt"
+        # Get the project root directory and construct the path to imagelist.txt
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        imagelist_path = os.path.join(project_root, "camera", "faces", "imagelist.txt")
+        
+        # Check if the file exists
+        if not os.path.exists(imagelist_path):
+            print(f"Warning: imagelist.txt not found at {imagelist_path}")
+            return "FAILURE"
+            
+        # Start the facial recognition process
         face_process = subprocess.Popen(
             ["python3", script_path, "--imagelist", imagelist_path],
             stdout=subprocess.PIPE,
