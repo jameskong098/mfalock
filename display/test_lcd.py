@@ -70,7 +70,7 @@ entered_digits = ""
 
 # App state
 system_locked = False
-# Possible screens: "set_password", "confirm", "home", "lock", "keypad", "facial_recognition", "voice_recognition" # Added voice_recognition
+# Possible screens: "set_password", "confirm", "home", "keypad", "facial_recognition", "voice_recognition" # Added voice_recognition
 # Initial screen determined after loading settings
 current_screen = "home" # Default to home, will change if password needed
 
@@ -79,8 +79,7 @@ menu_options = [
     "Voice Recognition",
     "Touch Password",
     "Rotary Authentication",
-    "Keypad Authentication",
-    "Basic Unlock"
+    "Keypad Authentication"
 ]
 menu_index = 0
 
@@ -181,16 +180,6 @@ def draw_message_on_home(message):
     draw.rectangle((rect_x0, rect_y0, rect_x1, rect_y1), fill=(50, 50, 50, 200)) # Dark semi-transparent
     draw.text((x, y), message, font=font, fill=(255, 255, 0)) # Yellow text
     display.display()
-
-def draw_lock_screen():
-    draw.rectangle((0, 0, width, height), fill=(0, 0, 0))
-    status = "System is LOCKED" if system_locked else "System is UNLOCKED"
-    color = (255, 0, 0) if system_locked else (0, 255, 0)
-    draw.text((20, 20), status, font=font, fill=color)
-    draw.text((20, 50), "A to Lock | B to Unlock", font=font, fill=(180, 180, 180))
-    draw.text((10, height - 15), "Press Y to return to Home", font=font, fill=(100, 100, 100))
-    display.display()
-
 
 def draw_keypad_screen():
     """
@@ -665,8 +654,6 @@ def emit_lcd_mode_change(new_mode_internal):
         ui_mode = "idle"  # Default to idle
         if new_mode_internal == "home":
             ui_mode = "idle"
-        elif new_mode_internal == "lock": # Basic Unlock screen
-            ui_mode = "idle" # Or a specific mode if UI needs to show something for lock screen
         elif new_mode_internal == "keypad":
             ui_mode = "keypad"
         elif new_mode_internal == "facial_recognition":
@@ -723,11 +710,7 @@ while True:
 
         elif display.read_button(display.BUTTON_X):
             selected = menu_options[menu_index]
-            if selected == "Basic Unlock":
-                current_screen = "lock"
-                emit_lcd_mode_change(current_screen) 
-                draw_lock_screen()
-            elif selected == "Touch Password":
+            if selected == "Touch Password":
                 draw_message_on_home("Touch: Auto-activates")
                 time.sleep(2)
                 draw_home_screen()
@@ -911,33 +894,6 @@ while True:
 
             time.sleep(0.2) # Debounce X button
 
-    elif current_screen == "lock":
-        if display.read_button(display.BUTTON_A):
-            system_locked = True
-            try:
-                with serial.Serial("/dev/ttyACM0", 9600, timeout=1) as ser:
-                    ser.write(b"lock\n")
-            except Exception as e:
-                print("Error sending lock:", e)
-            draw_lock_screen()
-            time.sleep(0.2)
-
-        elif display.read_button(display.BUTTON_B):
-            system_locked = False
-            try:
-                with serial.Serial("/dev/ttyACM0", 9600, timeout=1) as ser:
-                    ser.write(b"unlock\n")
-            except Exception as e:
-                print("Error sending unlock:", e)
-            draw_lock_screen()
-            time.sleep(0.2)
-
-        elif display.read_button(display.BUTTON_Y):
-            current_screen = "home"
-            emit_lcd_mode_change(current_screen) 
-            draw_home_screen()
-            time.sleep(0.2)
-
     elif current_screen == "keypad":
         if display.read_button(display.BUTTON_A):  # Move left
             keypad_index = (keypad_index - 1) % len(flat_digits)
@@ -967,7 +923,7 @@ while True:
             if len(entered_digits) == 4:
                 if entered_digits == user_password and password_Set:
                     print("Keypad Authentication Successful")
-                    draw_password_confirm_screen()  # or your custom success screen
+                    draw_keypad_success_screen() 
                     sio.emit('auth_event', {
                         'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
                         'status': 'success',
@@ -977,6 +933,12 @@ while True:
                         'location': 'Main Entrance',
                         'details': 'Correct PIN entered'
                     })
+                    time.sleep(2) # Show success screen for 2 seconds
+                    entered_digits = "" # Reset digits
+                    keypad_index = 0    # Reset keypad selection
+                    current_screen = "home" # Go to home screen
+                    emit_lcd_mode_change(current_screen)
+                    draw_home_screen()
                 else:
                     print("Keypad Authentication Failed")
                     draw_error_screen("Incorrect PIN")
@@ -989,10 +951,11 @@ while True:
                         'location': 'Main Entrance',
                         'details': 'Wrong PIN entered'
                     })
-                # Reset input after checking
-                time.sleep(2)
-                entered_digits = ""
-            draw_keypad_screen()
+                    time.sleep(2) # Show error for 2 seconds
+                    entered_digits = "" # Reset digits for retry
+                    draw_keypad_screen() # Redraw keypad for another attempt
+            else: # Not 4 digits yet, just update the display
+                draw_keypad_screen()
             time.sleep(0.2)
 
         elif display.read_button(display.BUTTON_Y):  # Return to home
