@@ -39,6 +39,8 @@ draw = ImageDraw.Draw(buffer)
 face_process = None
 display = DisplayHATMini(buffer)
 font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 16)
+# used for keypad authentication
+password_Set = False
 
 # Keypad config (flattened index-based navigation)
 # Bottom row includes 'Del' for backspace next to '0'
@@ -175,6 +177,14 @@ def draw_password_confirm_screen():
     
     display.display()
 
+def draw_keypad_success_screen():
+    """
+    shows a success screen for facial recognition.
+    """
+    draw.rectangle((0, 0, width, height), fill=(0, 0, 0))
+    draw.text((20, 20), "Success", font=font, fill=(0, 255, 0))
+    draw.text((10, height - 20), "Press Y to Return", font=font, fill=(180, 180, 180))
+    display.display()
 
 def draw_error_screen(error_message):
     """
@@ -405,7 +415,7 @@ while True:
                     entered_digits += selected_digit
 
                     if len(entered_digits) == 4:
-                        if entered_digits == user_password:
+                        if entered_digits == user_password and password_Set:
                             print("Keypad Authentication Successful")
                             draw_password_confirm_screen()  # or your custom success screen
                             sio.emit('auth_event', {
@@ -497,6 +507,8 @@ while True:
                 # "Confirm" selected
                 user_password = entered_digits
                 print("Password set to:", user_password)
+                #used to determine if password is beng entered in keypad authenitcation               
+                password_Set = True
                 # Reset for normal usage
                 entered_digits = ""
                 keypad_index = 0
