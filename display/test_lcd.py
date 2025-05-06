@@ -238,7 +238,7 @@ def start_facial_recognition(script_path, timeout=30):
     try:            
         # Start the facial recognition process
         face_process = subprocess.Popen(
-            ["python3", script_path, "--imagelist", script_path],
+            ["python3", script_path, "--imagelist", imagelist_path],  # FIXED
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True
