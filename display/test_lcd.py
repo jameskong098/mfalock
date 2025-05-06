@@ -263,11 +263,10 @@ def start_facial_recognition(script_path, imagelist_path, timeout=30):
             output = output.strip()
 
                  # IMPORTANT: Always print error output for debugging
-            print(f"Process returned with code: {return_code}")
             if error:
                 print(f"ERROR OUTPUT: {error}")
             print(f"STANDARD OUTPUT: {output}")
-            
+
             if output == "SUCCESS":
                 return "SUCCESS"
             else:
@@ -337,7 +336,7 @@ while True:
 
                 # Start facial recognition and capture result
                 # Pass the path to the script and imagelist.txt
-                project_root = os.path.dirname(os.path.dirname(__file__))
+                project_root = os.path.normpath(project_root)
                 script_path = os.path.join(project_root, "camera", "face_recognition.py")
                 imagelist_path = os.path.join(project_root, "camera", "faces", "imagelist.txt")
                 
