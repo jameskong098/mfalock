@@ -8,7 +8,6 @@ import socketio
 import sys
 import json 
 from dotenv import load_dotenv
-# pip install "python-socketio[client]"
 
 # Load environment variables from .env file in the root directory
 dotenv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')
