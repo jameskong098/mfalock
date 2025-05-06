@@ -115,6 +115,17 @@ def handle_voice_phrase(data):
     logger.info(f"Broadcasted phrase '{phrase}' to web clients.")
 # --- END ADDITION ---
 
+# --- ADDITION: Handle keypad updates from display script ---
+@socketio.on('keypad_update')
+def handle_keypad_update(data):
+    """Receives keypad digit updates from the display script and broadcasts them to web clients."""
+    digits = data.get('digits', '')
+    logger.info(f"Received keypad update: '{digits}'")
+    # Broadcast the digits to all connected web clients
+    socketio.emit('display_keypad_digits', {'digits': digits})
+    logger.info(f"Broadcasted keypad digits '{digits}' to web clients.")
+# --- END ADDITION ---
+
 # After other @socketio.on handlers:
 @socketio.on('lcd_mode_update')
 def handle_lcd_mode_update(data):

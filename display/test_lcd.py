@@ -161,6 +161,26 @@ def draw_home_screen():
     draw.text((10, height - 15), "Use A/B to scroll | X to select", font=font, fill=(100, 100, 100))
     display.display()
 
+def draw_message_on_home(message):
+    """Draws the home screen and overlays a message."""
+    draw_home_screen() # Draw the standard home screen first
+    text_width, text_height = draw.textsize(message, font=font)
+    x = (width - text_width) / 2
+    y = (height - text_height) / 2
+    # Draw a semi-transparent background for the message for better visibility
+    rect_x0 = x - 10
+    rect_y0 = y - 5
+    rect_x1 = x + text_width + 10
+    rect_y1 = y + text_height + 5
+    # Ensure rectangle coordinates are within screen bounds
+    rect_x0 = max(0, rect_x0)
+    rect_y0 = max(0, rect_y0)
+    rect_x1 = min(width, rect_x1)
+    rect_y1 = min(height, rect_y1)
+
+    draw.rectangle((rect_x0, rect_y0, rect_x1, rect_y1), fill=(50, 50, 50, 200)) # Dark semi-transparent
+    draw.text((x, y), message, font=font, fill=(255, 255, 0)) # Yellow text
+    display.display()
 
 def draw_lock_screen():
     draw.rectangle((0, 0, width, height), fill=(0, 0, 0))
@@ -707,8 +727,22 @@ while True:
                 current_screen = "lock"
                 emit_lcd_mode_change(current_screen) 
                 draw_lock_screen()
+            elif selected == "Touch Password":
+                draw_message_on_home("Touch: Auto-activates")
+                time.sleep(2)
+                draw_home_screen()
+            elif selected == "Rotary Authentication":
+                draw_message_on_home("Rotary: Auto-activates")
+                time.sleep(2)
+                draw_home_screen()
             elif selected == "Keypad Authentication":
                 current_screen = "keypad"
+                entered_digits = "" # Reset digits when entering keypad screen
+                keypad_index = 0
+                try: # Emit keypad_update when screen is entered
+                    sio.emit('keypad_update', {'digits': entered_digits})
+                except Exception as e:
+                    print(f"Error emitting initial keypad_update: {e}")
                 emit_lcd_mode_change(current_screen) 
                 draw_keypad_screen()
 
@@ -752,7 +786,7 @@ while True:
                     try:
                         sio.emit('auth_event', {
                             'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
-                            'status': 'Failure',
+                            'status': 'failure', # Standardized
                             'message': 'Access Not granted: Unknown face',
                             'method': 'Facial Recognition',
                             'user': 'User',  # Customize as needed
@@ -766,7 +800,7 @@ while True:
                     try:
                         sio.emit('auth_event', {
                             'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
-                            'status': 'Failure',
+                            'status': 'failure', # Standardized
                             'message': 'Access not Granted: Timeout',
                             'method': 'Facial Recognition',
                             'user': 'User',  # Customize as needed
@@ -812,7 +846,7 @@ while True:
                     try:
                         sio.emit('auth_event', {
                             'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
-                            'status': 'failure',
+                            'status': 'failure', # Standardized
                             'message': 'Access denied: Voice mismatch or not recognized',
                             'method': 'Voice Recognition',
                             'user': 'User',
@@ -827,7 +861,7 @@ while True:
                     try:
                         sio.emit('auth_event', {
                             'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
-                            'status': 'failure', # Treat timeout as failure
+                            'status': 'failure', # Standardized to lowercase
                             'message': 'Access denied: Voice recognition timed out',
                             'method': 'Voice Recognition',
                             'user': 'User',
@@ -842,7 +876,7 @@ while True:
                     try:
                         sio.emit('auth_event', {
                             'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
-                            'status': 'failure', # Treat script error as failure
+                            'status': 'failure', # Standardized to lowercase
                             'message': 'Access denied: Voice recognition script error',
                             'method': 'Voice Recognition',
                             'user': 'User',
@@ -923,35 +957,41 @@ while True:
             else:
                 if len(entered_digits) < 4:
                     entered_digits += selected_digit
+            
+            # Emit keypad_update after digit change
+            try:
+                sio.emit('keypad_update', {'digits': entered_digits})
+            except Exception as e:
+                print(f"Error emitting keypad_update: {e}")
 
-                    if len(entered_digits) == 4:
-                        if entered_digits == user_password and password_Set:
-                            print("Keypad Authentication Successful")
-                            draw_password_confirm_screen()  # or your custom success screen
-                            sio.emit('auth_event', {
-                                'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
-                                'status': 'success',
-                                'message': 'Access granted: Keypad match',
-                                'method': 'Keypad',
-                                'user': 'User',
-                                'location': 'Main Entrance',
-                                'details': 'Correct PIN entered'
-                            })
-                        else:
-                            print("Keypad Authentication Failed")
-                            draw_error_screen("Incorrect PIN")
-                            sio.emit('auth_event', {
-                                'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
-                                'status': 'failure',
-                                'message': 'Access denied: Wrong PIN',
-                                'method': 'Keypad',
-                                'user': 'User',
-                                'location': 'Main Entrance',
-                                'details': 'Wrong PIN entered'
-                            })
-                        # Reset input after checking
-                        time.sleep(2)
-                        entered_digits = ""
+            if len(entered_digits) == 4:
+                if entered_digits == user_password and password_Set:
+                    print("Keypad Authentication Successful")
+                    draw_password_confirm_screen()  # or your custom success screen
+                    sio.emit('auth_event', {
+                        'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+                        'status': 'success',
+                        'message': 'Access granted: Keypad match',
+                        'method': 'Keypad',
+                        'user': 'User',
+                        'location': 'Main Entrance',
+                        'details': 'Correct PIN entered'
+                    })
+                else:
+                    print("Keypad Authentication Failed")
+                    draw_error_screen("Incorrect PIN")
+                    sio.emit('auth_event', {
+                        'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+                        'status': 'failure', # Standardized
+                        'message': 'Access denied: Wrong PIN',
+                        'method': 'Keypad',
+                        'user': 'User',
+                        'location': 'Main Entrance',
+                        'details': 'Wrong PIN entered'
+                    })
+                # Reset input after checking
+                time.sleep(2)
+                entered_digits = ""
             draw_keypad_screen()
             time.sleep(0.2)
 
@@ -985,6 +1025,12 @@ while True:
                 # Add digit if under 4 characters
                 if len(entered_digits) < 4:
                     entered_digits += selected_digit
+            # Emit keypad_update after digit change in set_password screen as well
+            # This is for consistency, though web UI might not display it during setup
+            try:
+                sio.emit('keypad_update', {'digits': entered_digits})
+            except Exception as e:
+                print(f"Error emitting keypad_update from set_password: {e}")
             draw_set_password_screen()
             time.sleep(0.2)
 
