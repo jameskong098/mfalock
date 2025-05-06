@@ -10,7 +10,6 @@ Has this ever happened to you? After a long night of coding for CS 142A, you fin
 
 - 👤 Face Recognition (via Camera)
 - 🔊 Voice Recognition (via Microphone Array)
-- 👋 Gesture Unlocking (via Camera)
 - 👆 Secret Tap Pattern (via Pico Touch Sensor)
 - 🔄 Rotary Angle Sequence (via Pico Rotary Sensor)
 - 🔢 Keypad Access (via Touchscreen Display)
