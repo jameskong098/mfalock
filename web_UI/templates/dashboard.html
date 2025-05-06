@@ -14,8 +14,11 @@
             <div class="auth-method-indicator" id="rotary-method">
                 <i class="fas fa-sync-alt"></i> Rotary Input
             </div>
-            <div class="auth-method-indicator" id="voice-method"> <!-- Added Voice Indicator -->
+            <div class="auth-method-indicator" id="voice-method">
                 <i class="fas fa-microphone-alt"></i> Voice Recognition
+            </div>
+            <div class="auth-method-indicator" id="facial-method">
+                <i class="fas fa-camera-retro"></i> Facial Recognition
             </div>
         </div>
     </div>
@@ -94,7 +97,6 @@
         <button id="rotary-reset-btn" class="btn small" style="margin-top: 16px;">Reset Pattern</button>
     </div>
 
-    <!-- Added Voice Recognition Display Section -->
     <div class="voice-recognition-display" style="display: none;">
         <h3>Voice Authentication</h3>
         <p>Please say the following phrase clearly:</p>
@@ -103,7 +105,13 @@
         </div>
         <div id="voice-status" class="status-message" style="margin-top: 10px;"></div>
     </div>
-    <!-- End Added Section -->
+
+    <div class="facial-recognition-display" style="display: none;"> 
+        <h3>Facial Recognition</h3>
+        <p>Look at the camera.</p>
+        <!-- Might add an image/video feed placeholder or status here later -->
+        <div id="facial-status" class="status-message" style="margin-top: 10px;">Detecting...</div>
+    </div>
 </section>
 {% endblock %}
 

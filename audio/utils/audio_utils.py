@@ -61,7 +61,7 @@ try:
     stream.start()
     phrase = gen_phrase(5)
     # Output the phrase in a specific format for parsing
-    print(f"PHRASE: {phrase}")
+    print(f"PHRASE: {phrase}", flush=True) 
     # print(sd.query_devices()) # Optional: Keep for debugging if needed
     start_time = time.time()
     recognized_text = ""

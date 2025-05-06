@@ -7,7 +7,7 @@ default_words = [
     "jalapeño", "nectarine", "lemon", "watermelon", "parsley", "zucchini", "almond",
     "iceberg", "papaya", "garlic", "apple", "tomato", "quinoa", "yam", "mushroom",
     "radish", "eggplant", "date", "leek", "daikon", "vinegar", "broccoli", "spinach",
-    "raspberry", "tangerine", "xanthan", "zest", "mango", "cherry", "honeydew",
+    "raspberry", "tangerine", "zest", "mango", "cherry", "honeydew",
     "yogurt", "upland", "nutmeg", "kiwi", "wasabi", "ugly", "strawberry", "oregano",
     "horseradish", "banana", "fennel", "carrot"
 ]

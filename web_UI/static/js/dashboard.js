@@ -311,33 +311,59 @@ function addEventToList(event) {
 function updateSensorModeUI(mode) {
     const touchMethodElem = document.getElementById('touch-method');
     const rotaryMethodElem = document.getElementById('rotary-method');
-    const voiceMethodElem = document.getElementById('voice-method'); // Added Voice element
+    const voiceMethodElem = document.getElementById('voice-method');
+    const facialMethodElem = document.getElementById('facial-method'); 
+
     const touchDisplay = document.querySelectorAll('.touch-display');
     const rotaryDisplay = document.querySelectorAll('.rotary-instructions');
-    const voiceDisplay = document.querySelectorAll('.voice-recognition-display'); // Added Voice display
+    const voiceDisplay = document.querySelectorAll('.voice-recognition-display');
+    const facialDisplay = document.querySelectorAll('.facial-recognition-display'); 
+    const keypadDisplay = document.querySelectorAll('.keypad-display');
 
     // Deactivate all method indicators first
-    [touchMethodElem, rotaryMethodElem, voiceMethodElem].forEach(el => el?.classList.remove('active'));
+    [touchMethodElem, rotaryMethodElem, voiceMethodElem, facialMethodElem].forEach(el => {
+        if (el) el.classList.remove('active');
+    });
     // Hide all specific displays
-    [touchDisplay, rotaryDisplay, voiceDisplay].forEach(nodes => nodes.forEach(el => el.style.display = 'none'));
+    [touchDisplay, rotaryDisplay, voiceDisplay, facialDisplay, keypadDisplay].forEach(nodes => {
+        if (nodes) nodes.forEach(el => el.style.display = 'none');
+    });
 
-    if (mode === 'touch') {
-        touchMethodElem?.classList.add('active');
-        touchDisplay.forEach(el => el.style.display = 'block');
-    } else if (mode === 'rotary') {
-        rotaryMethodElem?.classList.add('active');
-        rotaryDisplay.forEach(el => el.style.display = 'block');
-    } else if (mode === 'voice_recognition') { // Added condition for voice
-        voiceMethodElem?.classList.add('active');
-        voiceDisplay.forEach(el => el.style.display = 'block');
-    } else {
-        // Default to idle or handle other modes
+    const modeString = String(mode || 'idle'); // Default to 'idle' if mode is falsy
+
+    if (modeString === 'touch') {
+        if (touchMethodElem) touchMethodElem.classList.add('active');
+        if (touchDisplay) touchDisplay.forEach(el => el.style.display = 'block');
+    } else if (modeString === 'rotary') {
+        if (rotaryMethodElem) rotaryMethodElem.classList.add('active');
+        if (rotaryDisplay) rotaryDisplay.forEach(el => el.style.display = 'block');
+    } else if (modeString === 'voice_recognition') {
+        if (voiceMethodElem) voiceMethodElem.classList.add('active');
+        if (voiceDisplay) voiceDisplay.forEach(el => el.style.display = 'block');
+    } else if (modeString === 'facial_recognition') { 
+        if (facialMethodElem) facialMethodElem.classList.add('active');
+        if (facialDisplay) facialDisplay.forEach(el => el.style.display = 'block');
+    } else if (modeString === 'keypad') {
+        // Add keypad indicator and display handling if you have one
+        // Example:
+        // const keypadMethodElem = document.getElementById('keypad-method');
+        // if (keypadMethodElem) keypadMethodElem.classList.add('active');
+        // if (keypadDisplay) keypadDisplay.forEach(el => el.style.display = 'block');
+    } else { // idle or home or other unhandled modes
+        // No specific method indicator is active by default if not 'touch', 'rotary', etc.
+        // All specific displays remain hidden (as per the reset at the function start).
     }
 
     const sensorModeIndicator = document.getElementById('current-sensor-mode');
     if (sensorModeIndicator) {
-        sensorModeIndicator.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
-        sensorModeIndicator.className = `mode-indicator ${mode}-mode`;
+        let displayModeText = modeString.charAt(0).toUpperCase() + modeString.slice(1).replace(/_/g, ' ');
+        if (modeString === 'idle') {
+            displayModeText = 'Idle'; // Or 'Home Menu' if you prefer
+        }
+        sensorModeIndicator.textContent = displayModeText;
+        // Add a class to the indicator for mode-specific styling if desired
+        sensorModeIndicator.className = 'mode-indicator'; // Reset class
+        sensorModeIndicator.classList.add(`${modeString}-mode`);
     }
 }
 

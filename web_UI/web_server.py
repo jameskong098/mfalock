@@ -115,6 +115,15 @@ def handle_voice_phrase(data):
     logger.info(f"Broadcasted phrase '{phrase}' to web clients.")
 # --- END ADDITION ---
 
+# After other @socketio.on handlers:
+@socketio.on('lcd_mode_update')
+def handle_lcd_mode_update(data):
+    """Receives mode updates from test_lcd.py and broadcasts them as sensor_mode_change."""
+    mode = data.get('mode', 'idle')  # Default to idle if no mode is provided
+    logger.info(f"Received lcd_mode_update: '{mode}'. Broadcasting as sensor_mode_change.")
+    # This event will be picked up by dashboard.js to update the UI
+    socketio.emit('sensor_mode_change', {'mode': mode})
+
 def load_logs():
     """Load logs from the log file."""
     if os.path.exists(LOG_FILE_PATH):
