@@ -224,7 +224,7 @@ def draw_facial_recognition_success_screen():
     display.display()
 
 # --- Facial Recognition Starter Function ---
-def start_facial_recognition(script_path="/path/to/your/facialrecognition.py", timeout=30):
+def start_facial_recognition(script_path, timeout=30):
     """
     Starts facial recognition script, captures the result (SUCCESS or FAILURE).
 
