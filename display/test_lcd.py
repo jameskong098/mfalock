@@ -235,8 +235,22 @@ def start_facial_recognition(script_path, imagelist_path, timeout=30):
     Returns:
         str: "SUCCESS", "FAILURE", or "TIMEOUT"
     """
-    try:            
+    try:     
+        #debugging 
+        print(f"Starting facial recognition:")
+        print(f"  - Script path: {script_path}")
+        print(f"  - Imagelist path: {imagelist_path}")
+        print(f"  - Timeout: {timeout} seconds")
+        
+        # Check if files exist
+        print(f"  - Script exists: {os.path.exists(script_path)}")
+        print(f"  - Imagelist exists: {os.path.exists(imagelist_path)}")
+        
         # Start the facial recognition process
+        command = ["python3", script_path, "--imagelist", imagelist_path]
+        print(f"Executing command: {' '.join(command)}")
+        # Start the facial recognition process
+
         face_process = subprocess.Popen(
             ["python3", script_path, "--imagelist", imagelist_path],  # FIXED
             stdout=subprocess.PIPE,
@@ -248,6 +262,12 @@ def start_facial_recognition(script_path, imagelist_path, timeout=30):
             output, error = face_process.communicate(timeout=timeout)
             output = output.strip()
 
+                 # IMPORTANT: Always print error output for debugging
+            print(f"Process returned with code: {return_code}")
+            if error:
+                print(f"ERROR OUTPUT: {error}")
+            print(f"STANDARD OUTPUT: {output}")
+            
             if output == "SUCCESS":
                 return "SUCCESS"
             else:
