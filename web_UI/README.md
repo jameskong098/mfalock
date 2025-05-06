@@ -94,6 +94,13 @@ Ensure the touch sensor is connected to the Raspberry Pi Pico correctly. Refer t
 
 ## Troubleshooting
 
+### Stopping the Web Server
+
+To stop the web server:
+
+1. Unplug the Raspberry Pi Pico from your raspberry pi/computer.
+2. Press `Ctrl+C` in the terminal where the server is running to terminate it.
+
 ### Pico Connection Issues
 
 If the server cannot connect to the Pico:
