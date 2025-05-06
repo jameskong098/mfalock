@@ -220,6 +220,36 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         });
+
+        // --- ADDITION: Listen for voice phrase updates ---
+        socket.on('display_voice_phrase', function(data) {
+            const phraseDisplay = document.getElementById('voice-phrase-display');
+            const voiceStatus = document.getElementById('voice-status'); // Optional status display
+            if (phraseDisplay) {
+                phraseDisplay.textContent = data.phrase || 'Waiting for phrase...'; // Display phrase or default text
+            }
+            // Optionally clear or update a status message related to voice
+            if (voiceStatus) {
+                voiceStatus.textContent = data.phrase ? 'Listening...' : ''; // Example status update
+            }
+        });
+        // --- END ADDITION ---
+
+        // --- ADDITION: Listen for keypad digit updates ---
+        socket.on('display_keypad_digits', function(data) {
+            const keypadDisplay = document.getElementById('keypad-digits-display');
+            if (keypadDisplay) {
+                if (data.digits && data.digits.length > 0) {
+                    keypadDisplay.textContent = data.digits.padEnd(4, '-');
+                } else {
+                    keypadDisplay.textContent = '- - - -';
+                }
+            }
+            // Optionally can update a status message for the keypad here too
+            // const keypadStatus = document.getElementById('keypad-status');
+            // if (keypadStatus) { keypadStatus.textContent = 'Entering PIN...'; }
+        });
+        // --- END ADDITION ---
     }
 
     // Initialize rotary lock system
@@ -230,6 +260,20 @@ document.addEventListener('DOMContentLoaded', function() {
         socket.on('touch_event', function(data) {
             updateLiveTouchSensor(data.action);
         });
+
+        // --- ADDITION: Listen for voice phrase updates ---
+        socket.on('display_voice_phrase', function(data) {
+            const phraseDisplay = document.getElementById('voice-phrase-display');
+            const voiceStatus = document.getElementById('voice-status'); // Optional status display
+            if (phraseDisplay) {
+                phraseDisplay.textContent = data.phrase || 'Waiting for phrase...'; // Display phrase or default text
+            }
+            // Optionally clear or update a status message related to voice
+            if (voiceStatus) {
+                voiceStatus.textContent = data.phrase ? 'Listening...' : ''; // Example status update
+            }
+        });
+        // --- END ADDITION ---
     }
 
     // Rotary reset button handler
@@ -297,26 +341,64 @@ function addEventToList(event) {
 function updateSensorModeUI(mode) {
     const touchMethodElem = document.getElementById('touch-method');
     const rotaryMethodElem = document.getElementById('rotary-method');
-    if (touchMethodElem && rotaryMethodElem) {
-        if (mode === 'touch') {
-            touchMethodElem.classList.add('active');
-            rotaryMethodElem.classList.remove('active');
-            document.querySelectorAll('.touch-display').forEach(el => el.style.display = 'block');
-            document.querySelectorAll('.rotary-instructions').forEach(el => el.style.display = 'none');
-        } else if (mode === 'rotary') {
-            touchMethodElem.classList.remove('active');
-            rotaryMethodElem.classList.add('active');
-            document.querySelectorAll('.touch-display').forEach(el => el.style.display = 'none');
-            document.querySelectorAll('.rotary-instructions').forEach(el => el.style.display = 'block');
-        } else {
-            touchMethodElem.classList.remove('active');
-            rotaryMethodElem.classList.remove('active');
-        }
+    const voiceMethodElem = document.getElementById('voice-method');
+    const facialMethodElem = document.getElementById('facial-method'); 
+    const keypadMethodElem = document.getElementById('keypad-method'); 
+
+    const touchDisplay = document.querySelectorAll('.touch-display');
+    const rotaryDisplay = document.querySelectorAll('.rotary-instructions');
+    const voiceDisplay = document.querySelectorAll('.voice-recognition-display');
+    const facialDisplay = document.querySelectorAll('.facial-recognition-display'); 
+    const keypadDisplay = document.querySelectorAll('.keypad-display');
+
+    // Deactivate all method indicators first
+    [touchMethodElem, rotaryMethodElem, voiceMethodElem, facialMethodElem, keypadMethodElem].forEach(el => {
+        if (el) el.classList.remove('active');
+    });
+    // Hide all specific displays
+    [touchDisplay, rotaryDisplay, voiceDisplay, facialDisplay, keypadDisplay].forEach(nodes => {
+        if (nodes) nodes.forEach(el => el.style.display = 'none');
+    });
+
+    const modeString = String(mode || 'idle'); // Default to 'idle' if mode is falsy
+
+    // Touch and Rotary are auto-activated, so they might show as active 
+    // even if another method (like voice or facial) is selected on the device menu.
+    // The primary active state should reflect the device's current *input* mode.
+
+    if (modeString === 'touch') {
+        if (touchMethodElem) touchMethodElem.classList.add('active');
+        if (touchDisplay) touchDisplay.forEach(el => el.style.display = 'block');
+    } else if (modeString === 'rotary') {
+        if (rotaryMethodElem) rotaryMethodElem.classList.add('active');
+        if (rotaryDisplay) rotaryDisplay.forEach(el => el.style.display = 'block');
+    } else if (modeString === 'voice_recognition') {
+        if (voiceMethodElem) voiceMethodElem.classList.add('active');
+        if (voiceDisplay) voiceDisplay.forEach(el => el.style.display = 'block');
+    } else if (modeString === 'facial_recognition') { 
+        if (facialMethodElem) facialMethodElem.classList.add('active');
+        if (facialDisplay) facialDisplay.forEach(el => el.style.display = 'block');
+    } else if (modeString === 'keypad') {
+        if (keypadMethodElem) keypadMethodElem.classList.add('active');
+        if (keypadDisplay) keypadDisplay.forEach(el => el.style.display = 'block');
+    } else { // idle or home or other unhandled modes
+        // No specific method indicator is active by default if not 'touch', 'rotary', etc.
+        // All specific displays remain hidden (as per the reset at the function start).
+        // Reset keypad display on idle
+        const keypadDigitsDisplay = document.getElementById('keypad-digits-display');
+        if (keypadDigitsDisplay) keypadDigitsDisplay.textContent = '- - - -';
     }
+
     const sensorModeIndicator = document.getElementById('current-sensor-mode');
     if (sensorModeIndicator) {
-        sensorModeIndicator.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
-        sensorModeIndicator.className = `mode-indicator ${mode}-mode`;
+        let displayModeText = modeString.charAt(0).toUpperCase() + modeString.slice(1).replace(/_/g, ' ');
+        if (modeString === 'idle') {
+            displayModeText = 'Idle'; // Or 'Home Menu' if you prefer
+        }
+        sensorModeIndicator.textContent = displayModeText;
+        // Add a class to the indicator for mode-specific styling if desired
+        sensorModeIndicator.className = 'mode-indicator'; // Reset class
+        sensorModeIndicator.classList.add(`${modeString}-mode`);
     }
 }
 

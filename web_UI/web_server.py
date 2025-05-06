@@ -104,6 +104,37 @@ def handle_auth_event(data):
         logger.info("Detected successful keypad authentication, sending to listener.")
         send_to_listener("KEYPAD - SUCCESS")
 
+# --- ADDITION: Handle voice phrase updates from display script ---
+@socketio.on('voice_phrase_update')
+def handle_voice_phrase(data):
+    """Receives the voice phrase from the display script and broadcasts it to web clients."""
+    phrase = data.get('phrase', '')
+    logger.info(f"Received voice phrase update: '{phrase}'")
+    # Broadcast the phrase to all connected web clients
+    socketio.emit('display_voice_phrase', {'phrase': phrase})
+    logger.info(f"Broadcasted phrase '{phrase}' to web clients.")
+# --- END ADDITION ---
+
+# --- ADDITION: Handle keypad updates from display script ---
+@socketio.on('keypad_update')
+def handle_keypad_update(data):
+    """Receives keypad digit updates from the display script and broadcasts them to web clients."""
+    digits = data.get('digits', '')
+    logger.info(f"Received keypad update: '{digits}'")
+    # Broadcast the digits to all connected web clients
+    socketio.emit('display_keypad_digits', {'digits': digits})
+    logger.info(f"Broadcasted keypad digits '{digits}' to web clients.")
+# --- END ADDITION ---
+
+# After other @socketio.on handlers:
+@socketio.on('lcd_mode_update')
+def handle_lcd_mode_update(data):
+    """Receives mode updates from test_lcd.py and broadcasts them as sensor_mode_change."""
+    mode = data.get('mode', 'idle')  # Default to idle if no mode is provided
+    logger.info(f"Received lcd_mode_update: '{mode}'. Broadcasting as sensor_mode_change.")
+    # This event will be picked up by dashboard.js to update the UI
+    socketio.emit('sensor_mode_change', {'mode': mode})
+
 def load_logs():
     """Load logs from the log file."""
     if os.path.exists(LOG_FILE_PATH):

@@ -28,6 +28,8 @@ if SOCKET_SERVER_IP is None:
     print("Error: ALLOWED_WEB_SERVER_IP environment variable not set in .env.")
     print("Please define ALLOWED_WEB_SERVER_IP in your .env file.")
     sys.exit(1)
+
+socket_url = f"http://{SOCKET_SERVER_IP}:{SOCKET_SERVER_PORT}" 
 # --- End Configuration ---
 
 # --- Settings File Path ---
@@ -68,7 +70,7 @@ entered_digits = ""
 
 # App state
 system_locked = False
-# Possible screens: "set_password", "confirm", "home", "lock", "keypad"
+# Possible screens: "set_password", "confirm", "home", "keypad", "facial_recognition", "voice_recognition" # Added voice_recognition
 # Initial screen determined after loading settings
 current_screen = "home" # Default to home, will change if password needed
 
@@ -77,8 +79,7 @@ menu_options = [
     "Voice Recognition",
     "Touch Password",
     "Rotary Authentication",
-    "Keypad Authentication",
-    "Basic Unlock"
+    "Keypad Authentication"
 ]
 menu_index = 0
 
@@ -159,16 +160,26 @@ def draw_home_screen():
     draw.text((10, height - 15), "Use A/B to scroll | X to select", font=font, fill=(100, 100, 100))
     display.display()
 
+def draw_message_on_home(message):
+    """Draws the home screen and overlays a message."""
+    draw_home_screen() # Draw the standard home screen first
+    text_width, text_height = draw.textsize(message, font=font)
+    x = (width - text_width) / 2
+    y = (height - text_height) / 2
+    # Draw a semi-transparent background for the message for better visibility
+    rect_x0 = x - 10
+    rect_y0 = y - 5
+    rect_x1 = x + text_width + 10
+    rect_y1 = y + text_height + 5
+    # Ensure rectangle coordinates are within screen bounds
+    rect_x0 = max(0, rect_x0)
+    rect_y0 = max(0, rect_y0)
+    rect_x1 = min(width, rect_x1)
+    rect_y1 = min(height, rect_y1)
 
-def draw_lock_screen():
-    draw.rectangle((0, 0, width, height), fill=(0, 0, 0))
-    status = "System is LOCKED" if system_locked else "System is UNLOCKED"
-    color = (255, 0, 0) if system_locked else (0, 255, 0)
-    draw.text((20, 20), status, font=font, fill=color)
-    draw.text((20, 50), "A to Lock | B to Unlock", font=font, fill=(180, 180, 180))
-    draw.text((10, height - 15), "Press Y to return to Home", font=font, fill=(100, 100, 100))
+    draw.rectangle((rect_x0, rect_y0, rect_x1, rect_y1), fill=(50, 50, 50, 200)) # Dark semi-transparent
+    draw.text((x, y), message, font=font, fill=(255, 255, 0)) # Yellow text
     display.display()
-
 
 def draw_keypad_screen():
     """
@@ -244,6 +255,48 @@ def draw_password_confirm_screen():
         draw.text((option_x_positions[idx], height - 20), option, font=font, fill=color)
     
     display.display()
+
+""" VOICE RECOGNITION SCREENS """
+def draw_voice_recognition_start_screen(): # Removed phrase argument
+    """Displays a generic listening message."""
+    draw.rectangle((0, 0, width, height), fill=(0, 0, 0))
+    draw.text((10, 5), "Please say the phrase", font=font, fill=(255, 255, 255))
+    draw.text((10, 30), "shown on the web interface.", font=font, fill=(255, 255, 255))
+
+    draw.text((10, height - 35), "Listening...", font=font, fill=(255, 255, 0))
+    draw.text((10, height - 20), "Press Y to Cancel", font=font, fill=(180, 180, 180))
+    display.display()
+
+def draw_voice_recognition_listening_screen():
+    """Indicates the system is actively listening (can be combined or separate)."""
+    # This might be integrated into the start screen or shown briefly
+    draw.rectangle((0, 0, width, height), fill=(0, 0, 0))
+    draw.text((20, 20), "Listening for voice...", font=font, fill=(255, 255, 0))
+    draw.text((10, height - 20), "Press Y to Cancel", font=font, fill=(180, 180, 180))
+    display.display()
+
+def draw_voice_recognition_success_screen():
+    """Shows a success message for voice recognition."""
+    draw.rectangle((0, 0, width, height), fill=(0, 0, 0))
+    draw.text((20, 20), "Voice Recognition Successful", font=font, fill=(0, 255, 0))
+    draw.text((10, height - 20), "Press Y to Return", font=font, fill=(180, 180, 180))
+    display.display()
+
+def draw_voice_recognition_failure_screen():
+    """Shows a failure message for voice recognition."""
+    draw.rectangle((0, 0, width, height), fill=(0, 0, 0))
+    draw.text((20, 20), "Voice Recognition Failed", font=font, fill=(255, 0, 0))
+    draw.text((10, height - 20), "Press Y to Return", font=font, fill=(180, 180, 180))
+    display.display()
+
+def draw_voice_recognition_timeout_screen():
+    """Shows a timeout message for voice recognition."""
+    draw.rectangle((0, 0, width, height), fill=(0, 0, 0))
+    draw.text((20, 20), "Voice Recognition Timeout", font=font, fill=(255, 165, 0)) # Orange color
+    draw.text((10, height - 20), "Press Y to Return", font=font, fill=(180, 180, 180))
+    display.display()
+""" END VOICE RECOGNITION SCREENS """
+
 
 def draw_keypad_success_screen():
     """
@@ -351,7 +404,185 @@ def start_facial_recognition(script_path, imagelist_path, timeout=30):
         return "FAILURE"
 
 
-""" AUDIO AUTHENTICATION Screens"""
+# --- Voice Recognition Starter Function ---
+def start_voice_recognition(script_path, timeout=35):
+    """
+    Starts the voice recognition script, captures the phrase and result.
+    Sends the phrase via Socket.IO.
+
+    Args:
+        script_path (str): Path to the voice recognition Python script (audio_utils.py).
+        timeout (int): Timeout in seconds for the entire process.
+
+    Returns:
+        tuple: (result, phrase)
+               result: "SUCCESS", "FAILURE", "TIMEOUT", or "ERROR"
+               phrase: The phrase generated by the script, or None.
+    """
+    global voice_process
+    phrase = None
+    result = "ERROR"  
+
+    try:
+        print(f"Starting voice recognition:")
+        print(f"  - Script path: {script_path}")
+        print(f"  - Timeout: {timeout} seconds")
+        print(f"  - Script exists: {os.path.exists(script_path)}")
+
+        command = ["python3", script_path]
+        print(f"Executing command: {' '.join(command)}")
+
+        voice_process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1, 
+            universal_newlines=True
+        )
+
+        start_time = time.time()
+        script_output_processed = False
+        stdout_lines = []
+        stderr_lines = []
+
+        # Non-blocking read from stdout and stderr
+        while True:
+            # Check for overall timeout for the voice recognition process
+            if time.time() - start_time > timeout:
+                if voice_process.poll() is None:  # If process is still running
+                    print("Voice recognition script exceeded main timeout. Terminating.")
+                    voice_process.terminate() # Try to terminate gracefully
+                    try:
+                        # Wait a short moment for termination
+                        voice_process.wait(timeout=1.0)
+                    except subprocess.TimeoutExpired:
+                        print("Process did not terminate gracefully, killing.")
+                        voice_process.kill() # Force kill if terminate fails
+                    
+                    # After kill/terminate, try to get remaining output
+                    # This might still raise if pipes are broken, hence the try-except
+                    try:
+                        stdout_rem, stderr_rem = voice_process.communicate()
+                        if stdout_rem: stdout_lines.extend(stdout_rem.splitlines())
+                        if stderr_rem: stderr_lines.extend(stderr_rem.splitlines())
+                    except ValueError: # Handles "I/O operation on closed file" if communicate is called on an already closed pipe
+                        print("Error communicating with process after timeout/kill, pipes might be closed.")
+                        
+                if not script_output_processed: result = "TIMEOUT"
+                break # Exit the loop on timeout
+
+            # Read a line from stdout without blocking indefinitely
+            # This requires making stdout non-blocking or using select, which is complex.
+            # A simpler approach for line-by-line processing with a timeout is to
+            # let the Popen object manage its streams and use communicate() with a timeout,
+            # but that doesn't allow immediate processing of "PHRASE:".
+            # So, we stick to readline but must be careful.
+
+            try:
+                line = voice_process.stdout.readline()
+            except ValueError: # Can happen if the pipe is closed unexpectedly
+                print("ValueError reading stdout, process might have terminated.")
+                break
+
+
+            if line:
+                line = line.strip()
+                stdout_lines.append(line) # Store all stdout for later full log if needed
+                print(f"Voice Script STDOUT: {line}") # For debugging
+
+                if line.startswith("PHRASE:"):
+                    phrase = line.replace("PHRASE:", "").strip()
+                    print(f"Extracted phrase: {phrase}")
+                    try:
+                        # Ensure sio is connected before emitting
+                        if sio.connected:
+                             sio.emit('voice_phrase_update', {'phrase': phrase})
+                             print("Emitted voice_phrase_update with phrase.")
+                        else:
+                            print("Cannot emit voice_phrase_update, Socket.IO not connected.")
+                    except Exception as e:
+                        print(f"Failed to send voice_phrase_update socket event: {e}")
+                elif line == "VOICE - SUCCESS":
+                    result = "SUCCESS"
+                    script_output_processed = True
+                    # Don't break here immediately, let the process finish or timeout
+                    # to collect any further (error) messages.
+                    # Or, if SUCCESS means the script will exit, this is fine.
+                    # For now, let's assume script exits on its own after printing result.
+                elif line == "VOICE - FAILURE":
+                    result = "FAILURE"
+                    script_output_processed = True
+                elif line == "VOICE - TIMEOUT": # Script itself reported timeout
+                    result = "TIMEOUT"
+                    script_output_processed = True
+                elif line == "VOICE - ERROR":   # Script itself reported error
+                    result = "ERROR"
+                    script_output_processed = True
+            
+            # Check if the process has ended
+            if voice_process.poll() is not None:
+                # Process has ended, read any remaining output from stdout
+                # This is important because readline() might miss the last lines if no newline
+                try:
+                    for remaining_line in voice_process.stdout: # Reads until EOF
+                        if remaining_line:
+                            remaining_line = remaining_line.strip()
+                            stdout_lines.append(remaining_line)
+                            print(f"Voice Script STDOUT (remaining): {remaining_line}")
+                            # Check for result lines again in remaining output
+                            if remaining_line == "VOICE - SUCCESS": result = "SUCCESS"; script_output_processed = True
+                            elif remaining_line == "VOICE - FAILURE": result = "FAILURE"; script_output_processed = True
+                            elif remaining_line == "VOICE - TIMEOUT": result = "TIMEOUT"; script_output_processed = True
+                            elif remaining_line == "VOICE - ERROR": result = "ERROR"; script_output_processed = True
+                except ValueError:
+                     print("ValueError reading remaining stdout, process might have terminated abruptly.")
+                break # Exit the loop as process has finished
+
+        # After the loop (due to timeout or process end), ensure process is cleaned up
+        if voice_process.poll() is None: # If still running (e.g. loop broke for other reasons)
+            print("Process still running after loop, terminating.")
+            voice_process.terminate()
+            try:
+                voice_process.wait(timeout=0.5)
+            except subprocess.TimeoutExpired:
+                voice_process.kill()
+
+        # Capture all stderr output at the end
+        # This is safer than trying to read it line-by-line if it's not line-buffered
+        try:
+            stderr_output = voice_process.stderr.read()
+            if stderr_output:
+                stderr_lines.extend(stderr_output.strip().splitlines())
+                print(f"Voice Script Full STDERR:\n{stderr_output.strip()}")
+        except ValueError:
+            print("ValueError reading stderr at the end, pipes might be closed.")
+
+
+        if stderr_lines and not script_output_processed and result == "ERROR":
+            print("Considering stderr as indication of error as no explicit result was processed.")
+            # result remains "ERROR"
+
+        print(f"Voice recognition finished. Determined Result: {result}, Phrase: {phrase}")
+        return result, phrase
+
+    except Exception as e:
+        print(f"Error starting/managing voice recognition process: {e}")
+        if voice_process and voice_process.poll() is None:
+            voice_process.kill()
+            # Attempt to communicate to free up resources, but might fail if already errored
+            try:
+                voice_process.communicate()
+            except:
+                pass
+        return "ERROR", phrase
+    finally:
+        if voice_process: # Ensure stderr is closed
+            if voice_process.stderr:
+                voice_process.stderr.close()
+            if voice_process.stdout: # Ensure stdout is closed
+                voice_process.stdout.close()
+        voice_process = None
 
 # Set backlight
 display.set_led(0.05, 0.05, 0.05)
@@ -384,8 +615,88 @@ elif current_screen == "home":
 else:
     draw_home_screen() # Default fallback
 
+# Global variable for the voice process
+voice_process = None
+
+# Initialize Socket.IO client
+sio = socketio.Client(logger=False, engineio_logger=False) # Set logger to True for debugging if needed
+has_connected = False
+
+@sio.event
+def connect():
+    global has_connected
+    print("LCD client: Connection established with web server")
+    has_connected = True
+    # Emit initial mode once connected and home screen is assumed to be active
+    # Ensure current_screen is defined before calling this
+    if 'current_screen' in globals() and current_screen:
+        emit_lcd_mode_change(current_screen)
+    else:
+        emit_lcd_mode_change("home") # Default to home/idle
+
+@sio.event
+def connect_error(data):
+    global has_connected
+    print(f"LCD client: The connection failed! Data: {data}")
+    has_connected = False
+
+@sio.event
+def disconnect():
+    global has_connected
+    print("LCD client: Disconnected!")
+    has_connected = False
+
+def emit_lcd_mode_change(new_mode_internal):
+    if not has_connected:
+        # print("LCD client: Not connected, cannot emit mode change.") # Optional log
+        return
+    try:
+        ui_mode = "idle"  # Default to idle
+        if new_mode_internal == "home":
+            ui_mode = "idle"
+        elif new_mode_internal == "keypad":
+            ui_mode = "keypad"
+        elif new_mode_internal == "facial_recognition":
+            ui_mode = "facial_recognition"
+        elif new_mode_internal == "voice_recognition":
+            ui_mode = "voice_recognition"
+        # Add other mappings for current_screen values if needed (e.g., set_password)
+
+        print(f"LCD client: Emitting lcd_mode_update. Internal: '{new_mode_internal}', UI: '{ui_mode}'")
+        sio.emit('lcd_mode_update', {'mode': ui_mode})
+    except Exception as e:
+        print(f"LCD client: Failed to send lcd_mode_update event: {e}")
+
+# ... (rest of your functions like draw_home_screen, start_facial_recognition, etc.)
+
+# Before your main loop, attempt to connect
+try:
+    print("LCD client: Attempting to connect to web server...")
+    sio.connect('http://localhost:8080', wait_timeout=10) # Adjust address if needed
+except socketio.exceptions.ConnectionError as e:
+    print(f"LCD client: Could not connect to web server at http://localhost:8080 - {e}")
+    # Optionally can decide if the script should exit or continue without web server comms
+
+# Initialize current_screen before the loop and emit initial state if not done in connect handler
+current_screen = "home"
+# ... any other initializations ...
+draw_home_screen()
+# If not connected yet, the connect handler will emit the mode.
+# If already connected (e.g. quick restart), emit here.
+if has_connected:
+    emit_lcd_mode_change(current_screen)
+
 
 while True:
+    if not sio.connected and not has_connected: # Attempt to reconnect if connection was lost
+        try:
+            print("LCD client: Attempting to reconnect to web server...")
+            sio.connect('http://localhost:8080', wait_timeout=5)
+        except socketio.exceptions.ConnectionError:
+            print("LCD client: Reconnect failed. Will try again later.")
+            time.sleep(5) # Wait before next reconnect attempt
+            continue # Skip the rest of the loop iteration
+
     if current_screen == "home":
         if display.read_button(display.BUTTON_A):
             menu_index = (menu_index - 1) % len(menu_options)
@@ -399,16 +710,29 @@ while True:
 
         elif display.read_button(display.BUTTON_X):
             selected = menu_options[menu_index]
-            if selected == "Basic Unlock":
-                current_screen = "lock"
-                draw_lock_screen()
+            if selected == "Touch Password":
+                draw_message_on_home("Touch: Auto-activates")
+                time.sleep(2)
+                draw_home_screen()
+            elif selected == "Rotary Authentication":
+                draw_message_on_home("Rotary: Auto-activates")
+                time.sleep(2)
+                draw_home_screen()
             elif selected == "Keypad Authentication":
                 current_screen = "keypad"
+                entered_digits = "" # Reset digits when entering keypad screen
+                keypad_index = 0
+                try: # Emit keypad_update when screen is entered
+                    sio.emit('keypad_update', {'digits': entered_digits})
+                except Exception as e:
+                    print(f"Error emitting initial keypad_update: {e}")
+                emit_lcd_mode_change(current_screen) 
                 draw_keypad_screen()
 
                 
             elif selected == "Facial Recognition":
                 current_screen = "facial_recognition"
+                emit_lcd_mode_change(current_screen) 
                 draw_facial_recognition_screen()
                 time.sleep(1)  # Give 1 second to show loading screen
 
@@ -445,7 +769,7 @@ while True:
                     try:
                         sio.emit('auth_event', {
                             'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
-                            'status': 'Failure',
+                            'status': 'failure', # Standardized
                             'message': 'Access Not granted: Unknown face',
                             'method': 'Facial Recognition',
                             'user': 'User',  # Customize as needed
@@ -459,7 +783,7 @@ while True:
                     try:
                         sio.emit('auth_event', {
                             'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
-                            'status': 'Failure',
+                            'status': 'failure', # Standardized
                             'message': 'Access not Granted: Timeout',
                             'method': 'Facial Recognition',
                             'user': 'User',  # Customize as needed
@@ -471,34 +795,104 @@ while True:
 
                 time.sleep(2)  # Show the success or failure screen briefly
                 current_screen = "home"
+                emit_lcd_mode_change(current_screen) 
                 draw_home_screen()
-            time.sleep(0.2)
+            elif selected == "Voice Recognition":
+                current_screen = "voice_recognition"
+                emit_lcd_mode_change(current_screen) 
+                draw_voice_recognition_start_screen() 
 
-    elif current_screen == "lock":
-        if display.read_button(display.BUTTON_A):
-            system_locked = True
-            try:
-                with serial.Serial("/dev/ttyACM0", 9600, timeout=1) as ser:
-                    ser.write(b"lock\n")
-            except Exception as e:
-                print("Error sending lock:", e)
-            draw_lock_screen()
-            time.sleep(0.2)
+                project_root = os.path.dirname(os.path.dirname(__file__))
+                script_path = os.path.join(project_root, "audio", "utils", "audio_utils.py")
 
-        elif display.read_button(display.BUTTON_B):
-            system_locked = False
-            try:
-                with serial.Serial("/dev/ttyACM0", 9600, timeout=1) as ser:
-                    ser.write(b"unlock\n")
-            except Exception as e:
-                print("Error sending unlock:", e)
-            draw_lock_screen()
-            time.sleep(0.2)
+                # Start voice recognition and capture result
+                result, phrase = start_voice_recognition(script_path, 35) # 35s timeout
 
-        elif display.read_button(display.BUTTON_Y):
-            current_screen = "home"
-            draw_home_screen()
-            time.sleep(0.2)
+                # Handle result: Draw screen and emit auth_event
+                if result == "SUCCESS":
+                    draw_voice_recognition_success_screen()
+                    try:
+                        sio.emit('auth_event', {
+                            'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+                            'status': 'success',
+                            'message': 'Access granted: Voice matched',
+                            'method': 'Voice Recognition',
+                            'user': 'User',
+                            'location': 'Main Entrance',
+                            'details': f'Correct phrase spoken: {phrase if phrase else "N/A"}'
+                        })
+                        print("Sent 'success' auth_event for voice recognition.")
+                    except Exception as e:
+                        print(f"Failed to send success socket event for voice: {e}")
+                elif result == "FAILURE":
+                    draw_voice_recognition_failure_screen()
+                    try:
+                        sio.emit('auth_event', {
+                            'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+                            'status': 'failure', # Standardized
+                            'message': 'Access denied: Voice mismatch or not recognized',
+                            'method': 'Voice Recognition',
+                            'user': 'User',
+                            'location': 'Main Entrance',
+                            'details': f'Incorrect phrase or no match. Expected phrase (if available): {phrase if phrase else "N/A"}'
+                        })
+                        print("Sent 'failure' auth_event for voice recognition (mismatch).")
+                    except Exception as e:
+                        print(f"Failed to send failure socket event for voice: {e}")
+                elif result == "TIMEOUT":
+                    draw_voice_recognition_timeout_screen()
+                    try:
+                        sio.emit('auth_event', {
+                            'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+                            'status': 'failure', # Standardized to lowercase
+                            'message': 'Access denied: Voice recognition timed out',
+                            'method': 'Voice Recognition',
+                            'user': 'User',
+                            'location': 'Main Entrance',
+                            'details': f'Timeout waiting for voice input. Expected phrase (if available): {phrase if phrase else "N/A"}'
+                        })
+                        print("Sent 'failure' auth_event for voice recognition (timeout).")
+                    except Exception as e:
+                        print(f"Failed to send timeout socket event for voice: {e}")
+                else:  # ERROR case
+                    draw_error_screen("Voice Recog Error!") # Generic error screen
+                    try:
+                        sio.emit('auth_event', {
+                            'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+                            'status': 'failure', # Standardized to lowercase
+                            'message': 'Access denied: Voice recognition script error',
+                            'method': 'Voice Recognition',
+                            'user': 'User',
+                            'location': 'Main Entrance',
+                            'details': f'Error in voice recognition process. Expected phrase (if available): {phrase if phrase else "N/A"}'
+                        })
+                        print("Sent 'failure' auth_event for voice recognition (script error).")
+                    except Exception as e:
+                        print(f"Failed to send error socket event for voice: {e}")
+                
+                # Clear the displayed phrase on the web UI after attempt
+                try:
+                    sio.emit('display_voice_phrase', {'phrase': ''})
+                except Exception as e:
+                    print(f"Failed to clear voice phrase on web UI: {e}")
+
+                # Wait for Y press or timeout to return home
+                wait_start_time = time.time()
+                returned_home = False
+                while time.time() - wait_start_time < 5: # Wait up to 5 seconds on result screen
+                     if display.read_button(display.BUTTON_Y):
+                         current_screen = "home"
+                         emit_lcd_mode_change(current_screen) 
+                         draw_home_screen()
+                         returned_home = True
+                         break
+                     time.sleep(0.1) # Non-blocking sleep
+                if not returned_home:
+                    current_screen = "home"
+                    emit_lcd_mode_change(current_screen) 
+                    draw_home_screen()
+
+            time.sleep(0.2) # Debounce X button
 
     elif current_screen == "keypad":
         if display.read_button(display.BUTTON_A):  # Move left
@@ -519,42 +913,56 @@ while True:
             else:
                 if len(entered_digits) < 4:
                     entered_digits += selected_digit
+            
+            # Emit keypad_update after digit change
+            try:
+                sio.emit('keypad_update', {'digits': entered_digits})
+            except Exception as e:
+                print(f"Error emitting keypad_update: {e}")
 
-                    if len(entered_digits) == 4:
-                        if entered_digits == user_password and password_Set:
-                            print("Keypad Authentication Successful")
-                            draw_password_confirm_screen()  # or your custom success screen
-                            sio.emit('auth_event', {
-                                'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
-                                'status': 'success',
-                                'message': 'Access granted: Keypad match',
-                                'method': 'Keypad',
-                                'user': 'User',
-                                'location': 'Main Entrance',
-                                'details': 'Correct PIN entered'
-                            })
-                        else:
-                            print("Keypad Authentication Failed")
-                            draw_error_screen("Incorrect PIN")
-                            sio.emit('auth_event', {
-                                'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
-                                'status': 'failure',
-                                'message': 'Access denied: Wrong PIN',
-                                'method': 'Keypad',
-                                'user': 'User',
-                                'location': 'Main Entrance',
-                                'details': 'Wrong PIN entered'
-                            })
-                        # Reset input after checking
-                        time.sleep(2)
-                        entered_digits = ""
-            draw_keypad_screen()
+            if len(entered_digits) == 4:
+                if entered_digits == user_password and password_Set:
+                    print("Keypad Authentication Successful")
+                    draw_keypad_success_screen() 
+                    sio.emit('auth_event', {
+                        'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+                        'status': 'success',
+                        'message': 'Access granted: Keypad match',
+                        'method': 'Keypad',
+                        'user': 'User',
+                        'location': 'Main Entrance',
+                        'details': 'Correct PIN entered'
+                    })
+                    time.sleep(2) # Show success screen for 2 seconds
+                    entered_digits = "" # Reset digits
+                    keypad_index = 0    # Reset keypad selection
+                    current_screen = "home" # Go to home screen
+                    emit_lcd_mode_change(current_screen)
+                    draw_home_screen()
+                else:
+                    print("Keypad Authentication Failed")
+                    draw_error_screen("Incorrect PIN")
+                    sio.emit('auth_event', {
+                        'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+                        'status': 'failure', # Standardized
+                        'message': 'Access denied: Wrong PIN',
+                        'method': 'Keypad',
+                        'user': 'User',
+                        'location': 'Main Entrance',
+                        'details': 'Wrong PIN entered'
+                    })
+                    time.sleep(2) # Show error for 2 seconds
+                    entered_digits = "" # Reset digits for retry
+                    draw_keypad_screen() # Redraw keypad for another attempt
+            else: # Not 4 digits yet, just update the display
+                draw_keypad_screen()
             time.sleep(0.2)
 
         elif display.read_button(display.BUTTON_Y):  # Return to home
             entered_digits = ""
             keypad_index = 0
             current_screen = "home"
+            emit_lcd_mode_change(current_screen) 
             draw_home_screen()
             time.sleep(0.2)
 
@@ -580,6 +988,12 @@ while True:
                 # Add digit if under 4 characters
                 if len(entered_digits) < 4:
                     entered_digits += selected_digit
+            # Emit keypad_update after digit change in set_password screen as well
+            # This is for consistency, though web UI might not display it during setup
+            try:
+                sio.emit('keypad_update', {'digits': entered_digits})
+            except Exception as e:
+                print(f"Error emitting keypad_update from set_password: {e}")
             draw_set_password_screen()
             time.sleep(0.2)
 
@@ -620,6 +1034,7 @@ while True:
                     entered_digits = ""
                     keypad_index = 0
                     current_screen = "home"
+                    emit_lcd_mode_change(current_screen)
                     draw_home_screen()
                 else:
                     # Handle save error - maybe show an error screen?
@@ -639,6 +1054,37 @@ while True:
                 face_process.terminate()
                 face_process = None
             current_screen = "home"
+            emit_lcd_mode_change(current_screen)
             draw_home_screen()
             time.sleep(0.2)
+    elif current_screen == "voice_recognition":
+        # Handle cancellation while the voice script is running OR while on result screen
+        if display.read_button(display.BUTTON_Y):
+            if voice_process and voice_process.poll() is None:
+                print("Cancelling voice recognition script...")
+                voice_process.kill() 
+                voice_process.communicate() 
+                voice_process = None # Cleared in finally block of start_voice_recognition
+                                     # but good to clear here if Y is pressed after start_voice_recognition returned
+                try:
+                    sio.emit('auth_event', {
+                        'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+                        'status': 'cancelled',
+                        'message': 'Voice recognition cancelled by user',
+                        'method': 'Voice Recognition',
+                        'user': 'User',
+                        'location': 'Main Entrance',
+                        'details': 'User pressed cancel button during operation.'
+                    })
+                    sio.emit('display_voice_phrase', {'phrase': ''}) 
+                    print("Sent 'cancelled' auth_event for voice recognition.")
+                except Exception as e:
+                    print(f"Failed to send cancel socket event for voice: {e}")
+            
+            # If Y is pressed on the result screen, it will also bring back to home
+            current_screen = "home"
+            emit_lcd_mode_change(current_screen)
+            draw_home_screen()
+            time.sleep(0.2) # Debounce Y button
+
     time.sleep(0.05)

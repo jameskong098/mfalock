@@ -8,11 +8,20 @@
             Current Mode: <span id="current-sensor-mode">Idle</span>
         </div>
         <div class="auth-methods">
-            <div class="auth-method-indicator" id="touch-method">
-                <i class="fas fa-hand-pointer"></i> Touch Pattern
+            <div class="auth-method-indicator" id="touch-method" title="Touch to activate">
+                <i class="fas fa-hand-pointer"></i> Touch Pattern <span class="auto-activate-indicator">* (Auto-activates)</span>
             </div>
-            <div class="auth-method-indicator" id="rotary-method">
-                <i class="fas fa-sync-alt"></i> Rotary Input
+            <div class="auth-method-indicator" id="rotary-method" title="Turn to activate">
+                <i class="fas fa-sync-alt"></i> Rotary Input <span class="auto-activate-indicator">* (Auto-activates)</span>
+            </div>
+            <div class="auth-method-indicator" id="voice-method">
+                <i class="fas fa-microphone-alt"></i> Voice Recognition
+            </div>
+            <div class="auth-method-indicator" id="facial-method">
+                <i class="fas fa-camera-retro"></i> Facial Recognition
+            </div>
+            <div class="auth-method-indicator" id="keypad-method">
+                <i class="fas fa-keyboard"></i> Keypad
             </div>
         </div>
     </div>
@@ -89,6 +98,31 @@
         <div id="rotary-angle-display">0°</div>
         <div id="rotary-status" class="status-message"></div>
         <button id="rotary-reset-btn" class="btn small" style="margin-top: 16px;">Reset Pattern</button>
+    </div>
+
+    <div class="voice-recognition-display" style="display: none;">
+        <h3>Voice Authentication</h3>
+        <p>Please say the following phrase clearly:</p>
+        <div class="phrase-container card" id="voice-phrase-display" style="margin-top: 10px; padding: 15px; font-size: 1.2em; text-align: center; background-color: var(--background-alt); border-radius: 8px;">
+            Waiting for phrase...
+        </div>
+        <div id="voice-status" class="status-message" style="margin-top: 10px;"></div>
+    </div>
+
+    <div class="facial-recognition-display" style="display: none;"> 
+        <h3>Facial Recognition</h3>
+        <p>Look at the camera.</p>
+        <!-- Might add an image/video feed placeholder or status here later -->
+        <div id="facial-status" class="status-message" style="margin-top: 10px;">Detecting...</div>
+    </div>
+
+    <div class="keypad-display" style="display: none;">
+        <h3>Keypad Authentication</h3>
+        <p>Enter your PIN using the device keypad.</p>
+        <div class="keypad-input-display card" style="margin-top: 10px; padding: 15px; font-size: 1.5em; text-align: center; background-color: var(--background-alt); border-radius: 8px; min-height: 50px;">
+            <span id="keypad-digits-display">- - - -</span>
+        </div>
+        <div id="keypad-status" class="status-message" style="margin-top: 10px;"></div>
     </div>
 </section>
 {% endblock %}
