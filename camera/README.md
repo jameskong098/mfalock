@@ -56,4 +56,12 @@ sudo -E /home/<your-username>/<your-env-name>/bin/python <path-to-your-script>/t
 export PYTHONPATH=/home/pi/mfa_env/lib/python3.11/site-packages
 sudo -E /home/pi/mfa_env/bin/python /home/pi/Desktop/mfalock/display/test_lcd.py
 ```
+9. If you have problem regarding numpy running on different version that isnt compatible with facial recognition, do the following: 
+```bash
+sudo apt update 
+sudo apt install libcap-dev -y
+
+pip install --upgrade --no-cache-dir --force-reinstall numpy simplejpeg face_recognition picamera2
+```
+
 
