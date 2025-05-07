@@ -858,7 +858,7 @@ while True:
 
                 
             elif selected == "Facial Recognition":
-                current_screen = "facial_recognition"
+                current_screen = "Facial_recognition"
                 emit_lcd_mode_change(current_screen) 
                 draw_facial_recognition_screen()
                 time.sleep(1)  # Give 1 second to show loading screen
@@ -925,7 +925,7 @@ while True:
                 emit_lcd_mode_change(current_screen) 
                 draw_home_screen()
             elif selected == "Voice Recognition":
-                current_screen = "voice_recognition"
+                current_screen = "Voice_recognition"
                 emit_lcd_mode_change(current_screen) 
                 draw_voice_recognition_start_screen() 
 
@@ -1176,7 +1176,7 @@ while True:
                 current_screen = "set_password"
                 draw_set_password_screen()
             time.sleep(0.2)
-    elif current_screen == "facial_recognition":
+    elif current_screen == "Facial_recognition":
         if display.read_button(display.BUTTON_Y):
             if face_process and face_process.poll() is None:
                 face_process.terminate()
@@ -1185,10 +1185,9 @@ while True:
             emit_lcd_mode_change(current_screen)
             draw_home_screen()
             time.sleep(0.2)
-    elif current_screen == "voice_recognition":
+    elif current_screen == "Voice_recognition":
         # Handle cancellation while the voice script is running OR while on result screen
-        y_pressed = display.read_button(display.BUTTON_Y)
-        if y_pressed:
+        if display.read_button(display.BUTTON_Y):
             print("starting cancelation for voice recognition")
             if voice_process and voice_process.poll() is None:
                 print("Cancelling voice recognition script...")
