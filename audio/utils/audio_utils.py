@@ -71,7 +71,7 @@ try:
         current_time = time.time()
         if current_time - start_time > timeout:
             if not final_result_reported:
-                print("VOICE - TIMEOUT") # Use specific output for timeout
+                print("VOICE - TIMEOUT", flush=True) # Use specific output for timeout
                 logging.info("Authentication TIMED OUT.")
                 final_result_reported = True
             break
@@ -83,11 +83,11 @@ try:
                 text = result.get("text", "")  # Extract recognized text
                 if text:
                     recognized_text = text # Store the last recognized text
-                    print(f"FINAL_RECOGNIZED_TEXT: {text}") # Parsable final result
+                    print(f"FINAL_RECOGNIZED_TEXT: {text}", flush=True) # Parsable final result
                     logging.info(f"Recognized: '{text}'")
                     if text.lower() == phrase.lower():
                         if not final_result_reported:
-                            print("VOICE - SUCCESS")
+                            print("VOICE - SUCCESS", flush=True)
                             logging.info("Authentication SUCCESSFUL.")
                             final_result_reported = True
                         break # Exit loop on success
@@ -97,7 +97,7 @@ try:
                 partial_result = json.loads(partial_result_json)
                 partial_text = partial_result.get("partial", "")
                 if partial_text:
-                    print(f"PARTIAL_RECOGNIZED_TEXT: {partial_text}") # Parsable partial result
+                    print(f"PARTIAL_RECOGNIZED_TEXT: {partial_text}", flush=True) # Parsable partial result
                     # print(f"Partial: {partial_text}") # Optional: for local debugging
 
         except queue.Empty:
@@ -106,7 +106,7 @@ try:
         except Exception as e:
             logging.error(f"Error during recognition loop: {e}")
             if not final_result_reported:
-                print("VOICE - ERROR") # Indicate an error occurred
+                print("VOICE - ERROR", flush=True) # Indicate an error occurred
                 final_result_reported = True
             break
 
@@ -114,29 +114,29 @@ try:
     if not final_result_reported:
         if recognized_text and phrase and recognized_text.lower() == phrase.lower(): # Check if recognized_text and phrase are not None
              # This case should ideally be caught inside the loop, but as a fallback
-             print("VOICE - SUCCESS")
+             print("VOICE - SUCCESS", flush=True)
              logging.info("Authentication SUCCESSFUL.")
         elif recognized_text is not None and phrase is not None: # Ensure they are not None before comparing
-             print("VOICE - FAILURE") # Print failure if loop ended without success
+             print("VOICE - FAILURE", flush=True) # Print failure if loop ended without success
              logging.info(f"Authentication FAILED. Expected '{phrase}', Got '{recognized_text}'")
         else:
             # Handle cases where recognized_text or phrase might be None if loop exited early
             # For example, if timeout occurred before any recognition, or phrase wasn't generated.
-            print("VOICE - FAILURE") # Default to failure if specific conditions not met
+            print("VOICE - FAILURE", flush=True) # Default to failure if specific conditions not met
             logging.info(f"Authentication FAILED. Expected '{phrase if phrase else '[no phrase generated/available]'}', Got '{recognized_text if recognized_text else '[no speech recognized]'}'")
 
 except KeyboardInterrupt:
-    print("Interrupted by user.")
+    print("Interrupted by user.", flush=True)
     logging.warning("Authentication INTERRUPTED by user.")
-    print("VOICE - FAILURE") # Treat interrupt as failure
+    print("VOICE - FAILURE", flush=True) # Treat interrupt as failure
 
 except Exception as e:
     logging.error(f"An error occurred: {e}")
-    print(f"An error occurred: {e}")
-    print("VOICE - ERROR") # Indicate a script-level error
+    print(f"An error occurred: {e}", flush=True)
+    print("VOICE - ERROR", flush=True) # Indicate a script-level error
 
 finally:
-    print(" Stopping...")
+    print(" Stopping...", flush=True)
     if 'stream' in locals() and stream:
         try:
             stream.stop()
