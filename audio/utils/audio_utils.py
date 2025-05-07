@@ -83,7 +83,7 @@ try:
                 text = result.get("text", "")  # Extract recognized text
                 if text:
                     recognized_text = text # Store the last recognized text
-                    print(f"You said: {text}") # Keep this for logging/debugging
+                    print(f"FINAL_RECOGNIZED_TEXT: {text}") # Parsable final result
                     logging.info(f"Recognized: '{text}'")
                     if text.lower() == phrase.lower():
                         if not final_result_reported:
@@ -91,13 +91,14 @@ try:
                             logging.info("Authentication SUCCESSFUL.")
                             final_result_reported = True
                         break # Exit loop on success
-                    # else: # Don't immediately print failure, wait for timeout or final result
-                    #     print("VOICE - FAILURE") # Avoid printing failure on intermediate results
-            # else:
-                # Partial results can be accessed here if needed
-                # partial_result = json.loads(recognizer.PartialResult())
-                # print(f"Partial: {partial_result.get('partial', '')}")
-                # pass
+            else:
+                # Handle partial results for live feedback
+                partial_result_json = recognizer.PartialResult()
+                partial_result = json.loads(partial_result_json)
+                partial_text = partial_result.get("partial", "")
+                if partial_text:
+                    print(f"PARTIAL_RECOGNIZED_TEXT: {partial_text}") # Parsable partial result
+                    # print(f"Partial: {partial_text}") # Optional: for local debugging
 
         except queue.Empty:
             # No data in the queue, continue loop check timeout
@@ -111,13 +112,18 @@ try:
 
     # After loop finishes (timeout, success, or error), check if success was achieved
     if not final_result_reported:
-        if recognized_text.lower() == phrase.lower():
+        if recognized_text and phrase and recognized_text.lower() == phrase.lower(): # Check if recognized_text and phrase are not None
              # This case should ideally be caught inside the loop, but as a fallback
              print("VOICE - SUCCESS")
              logging.info("Authentication SUCCESSFUL.")
-        else:
+        elif recognized_text is not None and phrase is not None: # Ensure they are not None before comparing
              print("VOICE - FAILURE") # Print failure if loop ended without success
              logging.info(f"Authentication FAILED. Expected '{phrase}', Got '{recognized_text}'")
+        else:
+            # Handle cases where recognized_text or phrase might be None if loop exited early
+            # For example, if timeout occurred before any recognition, or phrase wasn't generated.
+            print("VOICE - FAILURE") # Default to failure if specific conditions not met
+            logging.info(f"Authentication FAILED. Expected '{phrase if phrase else '[no phrase generated/available]'}', Got '{recognized_text if recognized_text else '[no speech recognized]'}'")
 
 except KeyboardInterrupt:
     print("Interrupted by user.")
