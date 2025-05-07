@@ -604,6 +604,44 @@ def start_voice_recognition(script_path, timeout=35):
                     result = "ERROR"
                     script_output_processed = True
             
+            if display.read_button(display.BUTTON_Y):
+                print("starting cancelation for voice recognition")
+                if voice_process and voice_process.poll() is None:
+                    print("Cancelling voice recognition script...")
+                    voice_process.kill() 
+                    try:
+                        voice_process.communicate(timeout=1) # Attempt to get remaining output
+                    except subprocess.TimeoutExpired:
+                        print("Timeout during communicate after kill in Y press.")
+                    except ValueError:
+                        print("ValueError during communicate after kill in Y press (pipes closed).")
+                    voice_process = None
+                    try:
+                        if sio.connected:
+                            sio.emit('auth_event', {
+                                'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+                                'status': 'cancelled',
+                                'message': 'Voice recognition cancelled by user',
+                                'method': 'Voice Recognition',
+                                'user': 'User',
+                                'location': 'Main Entrance',
+                                'details': 'User pressed cancel button during operation.'
+                            })
+                            sio.emit('display_voice_phrase', {'phrase': ''}) 
+                            sio.emit('recognized_speech_input', {'text': ''}) # Clear recognized text on cancel
+                            print("Sent 'cancelled' auth_event for voice recognition.")
+                        else:
+                            print("Cannot emit events - Socket.IO not connected")
+                    except Exception as e:
+                        print(f"Failed to send cancel socket event for voice: {e}")
+            
+            # If Y is pressed on the result screen, it will also bring back to home
+            print("Returning to home screen from voice recognition.")
+            current_screen = "home"
+            emit_lcd_mode_change(current_screen)
+            draw_home_screen()
+            time.sleep(0.2) # Debounce Y button
+
             # Check if the process has ended
             if voice_process.poll() is not None:
                 # Process has ended, read any remaining output from stdout
