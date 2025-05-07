@@ -1187,7 +1187,8 @@ while True:
             time.sleep(0.2)
     elif current_screen == "voice_recognition":
         # Handle cancellation while the voice script is running OR while on result screen
-        if display.read_button(display.BUTTON_Y):
+        y_pressed = display.read_button(display.BUTTON_Y)
+        if y_pressed:
             print("starting cancelation for voice recognition")
             if voice_process and voice_process.poll() is None:
                 print("Cancelling voice recognition script...")
