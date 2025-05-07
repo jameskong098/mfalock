@@ -731,6 +731,8 @@ def auth_event(data):
             # Show success screen
             if method == 'Touch Pattern':
                 draw_tap_success_screen()
+                time.sleep(2)
+                draw_home_screen()
             else:  # Rotary Input
                 draw_rotary_success_screen()
             
@@ -744,6 +746,7 @@ def auth_event(data):
             # Show failure message
             draw_error_screen(f"{method} Failed!")
             time.sleep(2)
+            draw_home_screen()
             # Stay on current screen or return to home based on your preference
 
 @sio.event
