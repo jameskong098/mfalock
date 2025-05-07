@@ -3,13 +3,13 @@ import json
 import os
 
 default_words = [
-    "elderberry", "kale", "orange", "vanilla", "fig", "quince", "grape", "xigua",
-    "jalapeño", "nectarine", "lemon", "watermelon", "parsley", "zucchini", "almond",
-    "iceberg", "papaya", "garlic", "apple", "tomato", "quinoa", "yam", "mushroom",
-    "radish", "eggplant", "date", "leek", "daikon", "vinegar", "broccoli", "spinach",
-    "raspberry", "tangerine", "zest", "mango", "cherry", "honeydew",
-    "yogurt", "upland", "nutmeg", "kiwi", "wasabi", "ugly", "strawberry", "oregano",
-    "horseradish", "banana", "fennel", "carrot"
+    "kale", "orange", "vanilla", "fig", "grape",
+    "lemon", "watermelon", "parsley", "zucchini", "almond",
+    "iceberg", "garlic", "apple", "tomato", "yam", "mushroom",
+    "radish", "eggplant", "date", "leek", "vinegar", "broccoli", "spinach",
+    "raspberry", "tangerine", "mango", "cherry", "honeydew",
+    "yogurt", "kiwi", "wasabi", "ugly", "strawberry",
+    "banana", "carrot"
 ]
 
 def _load_words_from_settings(settings_path: str, default_list: list) -> list:
