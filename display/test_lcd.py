@@ -556,13 +556,12 @@ def start_voice_recognition(script_path, timeout=35):
             if line:
                 line = line.strip()
                 stdout_lines.append(line) # Store all stdout for later full log if needed
-                print(f"Voice Script STDOUT: {line}") # For debugging
+                # print(f"Voice Script STDOUT: {line}") # Already printing specific lines
 
                 if line.startswith("PHRASE:"):
                     phrase = line.replace("PHRASE:", "").strip()
                     print(f"Extracted phrase: {phrase}")
                     try:
-                        # Ensure sio is connected before emitting
                         if sio.connected:
                              sio.emit('voice_phrase_update', {'phrase': phrase})
                              print("Emitted voice_phrase_update with phrase.")
@@ -570,20 +569,38 @@ def start_voice_recognition(script_path, timeout=35):
                             print("Cannot emit voice_phrase_update, Socket.IO not connected.")
                     except Exception as e:
                         print(f"Failed to send voice_phrase_update socket event: {e}")
+                elif line.startswith("PARTIAL_RECOGNIZED_TEXT:"):
+                    partial_text = line.replace("PARTIAL_RECOGNIZED_TEXT:", "").strip()
+                    # print(f"Partial text: {partial_text}") # For debugging
+                    try:
+                        if sio.connected:
+                            sio.emit('recognized_speech_input', {'text': partial_text})
+                            # print(f"Emitted partial recognized speech: {partial_text}") # Can be too verbose
+                        # else: # Optional: log if not connected
+                            # print("Socket.IO not connected, cannot emit partial speech.")
+                    except Exception as e:
+                        print(f"Failed to send partial recognized_speech_input: {e}")
+                elif line.startswith("FINAL_RECOGNIZED_TEXT:"):
+                    final_text = line.replace("FINAL_RECOGNIZED_TEXT:", "").strip()
+                    # print(f"Final text: {final_text}") # For debugging
+                    try:
+                        if sio.connected:
+                            sio.emit('recognized_speech_input', {'text': final_text})
+                            # print(f"Emitted final recognized speech: {final_text}")
+                        # else:
+                            # print("Socket.IO not connected, cannot emit final speech.")
+                    except Exception as e:
+                        print(f"Failed to send final recognized_speech_input: {e}")
                 elif line == "VOICE - SUCCESS":
                     result = "SUCCESS"
                     script_output_processed = True
-                    # Don't break here immediately, let the process finish or timeout
-                    # to collect any further (error) messages.
-                    # Or, if SUCCESS means the script will exit, this is fine.
-                    # For now, let's assume script exits on its own after printing result.
                 elif line == "VOICE - FAILURE":
                     result = "FAILURE"
                     script_output_processed = True
-                elif line == "VOICE - TIMEOUT": # Script itself reported timeout
+                elif line == "VOICE - TIMEOUT":
                     result = "TIMEOUT"
                     script_output_processed = True
-                elif line == "VOICE - ERROR":   # Script itself reported error
+                elif line == "VOICE - ERROR":
                     result = "ERROR"
                     script_output_processed = True
             
@@ -625,6 +642,13 @@ def start_voice_recognition(script_path, timeout=35):
         except ValueError:
             print("ValueError reading stderr at the end, pipes might be closed.")
 
+        # Clear recognized text on UI after processing finishes, regardless of outcome
+        try:
+            if sio.connected:
+                sio.emit('recognized_speech_input', {'text': ''})
+                print("Emitted empty recognized_speech_input to clear UI.")
+        except Exception as e:
+            print(f"Failed to send clearing recognized_speech_input: {e}")
 
         if stderr_lines and not script_output_processed and result == "ERROR":
             print("Considering stderr as indication of error as no explicit result was processed.")
@@ -973,6 +997,7 @@ while True:
                 # Clear the displayed phrase on the web UI after attempt
                 try:
                     sio.emit('display_voice_phrase', {'phrase': ''})
+                    sio.emit('recognized_speech_input', {'text': ''}) # Clear recognized text
                 except Exception as e:
                     print(f"Failed to clear voice phrase on web UI: {e}")
 
@@ -1163,9 +1188,13 @@ while True:
             if voice_process and voice_process.poll() is None:
                 print("Cancelling voice recognition script...")
                 voice_process.kill() 
-                voice_process.communicate() 
-                voice_process = None # Cleared in finally block of start_voice_recognition
-                                     # but good to clear here if Y is pressed after start_voice_recognition returned
+                try:
+                    voice_process.communicate(timeout=1) # Attempt to get remaining output
+                except subprocess.TimeoutExpired:
+                    print("Timeout during communicate after kill in Y press.")
+                except ValueError:
+                    print("ValueError during communicate after kill in Y press (pipes closed).")
+                voice_process = None
                 try:
                     sio.emit('auth_event', {
                         'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
@@ -1177,6 +1206,7 @@ while True:
                         'details': 'User pressed cancel button during operation.'
                     })
                     sio.emit('display_voice_phrase', {'phrase': ''}) 
+                    sio.emit('recognized_speech_input', {'text': ''}) # Clear recognized text on cancel
                     print("Sent 'cancelled' auth_event for voice recognition.")
                 except Exception as e:
                     print(f"Failed to send cancel socket event for voice: {e}")

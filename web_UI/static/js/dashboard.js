@@ -225,12 +225,27 @@ document.addEventListener('DOMContentLoaded', function() {
         socket.on('display_voice_phrase', function(data) {
             const phraseDisplay = document.getElementById('voice-phrase-display');
             const voiceStatus = document.getElementById('voice-status'); // Optional status display
+            const userInputDisplay = document.getElementById('voice-user-input-display'); // Get user input display
+
             if (phraseDisplay) {
                 phraseDisplay.textContent = data.phrase || 'Waiting for phrase...'; // Display phrase or default text
             }
             // Optionally clear or update a status message related to voice
             if (voiceStatus) {
                 voiceStatus.textContent = data.phrase ? 'Listening...' : ''; // Example status update
+            }
+            // Clear previous user input when a new phrase is displayed or phrase is cleared
+            if (userInputDisplay) {
+                userInputDisplay.textContent = ''; 
+            }
+        });
+        // --- END ADDITION ---
+
+        // --- ADDITION: Listen for live recognized text updates ---
+        socket.on('update_live_recognized_text', function(data) {
+            const userInputDisplay = document.getElementById('voice-user-input-display');
+            if (userInputDisplay) {
+                userInputDisplay.textContent = data.text || ''; // Display recognized text or clear if empty
             }
         });
         // --- END ADDITION ---
@@ -265,12 +280,27 @@ document.addEventListener('DOMContentLoaded', function() {
         socket.on('display_voice_phrase', function(data) {
             const phraseDisplay = document.getElementById('voice-phrase-display');
             const voiceStatus = document.getElementById('voice-status'); // Optional status display
+            const userInputDisplay = document.getElementById('voice-user-input-display'); // Get user input display
+
             if (phraseDisplay) {
                 phraseDisplay.textContent = data.phrase || 'Waiting for phrase...'; // Display phrase or default text
             }
             // Optionally clear or update a status message related to voice
             if (voiceStatus) {
                 voiceStatus.textContent = data.phrase ? 'Listening...' : ''; // Example status update
+            }
+            // Clear previous user input when a new phrase is displayed or phrase is cleared
+            if (userInputDisplay) {
+                userInputDisplay.textContent = '';
+            }
+        });
+        // --- END ADDITION ---
+        
+        // --- ADDITION: Listen for live recognized text updates ---
+        socket.on('update_live_recognized_text', function(data) {
+            const userInputDisplay = document.getElementById('voice-user-input-display');
+            if (userInputDisplay) {
+                userInputDisplay.textContent = data.text || ''; // Display recognized text or clear if empty
             }
         });
         // --- END ADDITION ---

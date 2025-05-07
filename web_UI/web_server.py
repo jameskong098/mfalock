@@ -126,6 +126,17 @@ def handle_keypad_update(data):
     logger.info(f"Broadcasted keypad digits '{digits}' to web clients.")
 # --- END ADDITION ---
 
+# --- ADDITION: Handle recognized speech updates from display script ---
+@socketio.on('recognized_speech_input')
+def handle_recognized_speech_input(data):
+    """Receives recognized speech text from test_lcd.py and broadcasts it to web clients for live display."""
+    text = data.get('text', '')
+    # logger.info(f"Received recognized speech for display: '{text}'") # Can be too verbose for partials
+    # Broadcast the recognized text to all connected web clients
+    socketio.emit('update_live_recognized_text', {'text': text})
+    # logger.info(f"Broadcasted recognized speech '{text}' to web clients.") # Can be too verbose
+# --- END ADDITION ---
+
 # After other @socketio.on handlers:
 @socketio.on('lcd_mode_update')
 def handle_lcd_mode_update(data):
