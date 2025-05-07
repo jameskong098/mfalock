@@ -1008,7 +1008,9 @@ while True:
                 # Wait for Y press or timeout to return home
                 wait_start_time = time.time()
                 returned_home = False
+                print("Waiting for Y press to return home... 1")
                 while time.time() - wait_start_time < 5: # Wait up to 5 seconds on result screen
+                     print("Waiting for Y press to return home... 2")
                      if display.read_button(display.BUTTON_Y):
                          current_screen = "home"
                          emit_lcd_mode_change(current_screen) 
