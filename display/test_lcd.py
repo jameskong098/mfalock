@@ -1087,6 +1087,7 @@ while True:
             time.sleep(0.2)
 
         elif display.read_button(display.BUTTON_Y):  # Return to home
+            print("pressed Y to return")
             entered_digits = ""
             keypad_index = 0
             current_screen = "home"
