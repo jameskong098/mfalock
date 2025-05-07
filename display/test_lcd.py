@@ -926,6 +926,7 @@ while True:
                 draw_home_screen()
             elif selected == "Voice Recognition":
                 current_screen = "Voice_recognition"
+                print(current_screen)
                 emit_lcd_mode_change(current_screen) 
                 draw_voice_recognition_start_screen() 
 
@@ -1187,6 +1188,7 @@ while True:
             draw_home_screen()
             time.sleep(0.2)
     elif current_screen == "Voice_recognition":
+        print("Voice recognition screen active")
         # Handle cancellation while the voice script is running OR while on result screen
         if display.read_button(display.BUTTON_Y):
             print("starting cancelation for voice recognition")
