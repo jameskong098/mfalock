@@ -689,29 +689,39 @@ voice_process = None
 sio = socketio.Client(logger=False, engineio_logger=False) # Set logger to True for debugging if needed
 has_connected = False
 #socket to lsiten for rotary and touch events
+# Add this handler to process any authentication event
+
 @sio.event
-def auth_success(data):
-    """Receive authentication success signals from web server"""
+def auth_event(data):
+    """Handle all authentication events"""
     global current_screen
     
-    auth_method = data.get('method', 'Unknown')
-    print(f"Received authentication success for method: {auth_method}")
+    status = data.get('status', '').lower()
+    method = data.get('method', 'Unknown')
     
-    # Show appropriate success screen based on method
-    if auth_method == 'Touch Pattern':
-        # Show touch pattern success
-        draw_error_screen("Touch Auth Successful!")
-        time.sleep(1.5)
-    elif auth_method == 'Rotary Input':
-        # Show rotary authentication success
-        draw_error_screen("Rotary Auth Successful!")
-        time.sleep(1.5)
+    print(f"Received auth_event: {method} - {status}")
     
-    # Return to home screen after showing success
-    if current_screen != "home":
-        current_screen = "home"
-        emit_lcd_mode_change(current_screen)
-        draw_home_screen()
+    # Only handle touch and rotary here (other methods have their own handlers)
+    if method in ['Touch Pattern', 'Rotary Input']:
+        if status == 'success':
+            # Show success screen
+            if method == 'Touch Pattern':
+                draw_tap_success_screen()
+            else:  # Rotary Input
+                draw_rotary_success_screen()
+            
+            time.sleep(2)
+            
+            # Return to home
+            current_screen = "home"
+            emit_lcd_mode_change(current_screen)
+            draw_home_screen()
+        elif status == 'failure':
+            # Show failure message
+            draw_error_screen(f"{method} Failed!")
+            time.sleep(2)
+            # Stay on current screen or return to home based on your preference
+
 @sio.event
 def connect():
     global has_connected
@@ -801,11 +811,11 @@ while True:
         elif display.read_button(display.BUTTON_X):
             selected = menu_options[menu_index]
             if selected == "Touch Password":
-                draw_message_on_home("Touch: Auto-activates")
+                draw_tap_screen()
                 time.sleep(2)
                 draw_home_screen()
             elif selected == "Rotary Authentication":
-                draw_message_on_home("Rotary: Auto-activates")
+                draw_Rotary_screen()
                 time.sleep(2)
                 draw_home_screen()
             elif selected == "Keypad Authentication":
