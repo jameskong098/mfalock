@@ -392,6 +392,8 @@ def monitor_pico():
                     save_logs(auth_log_entries)
                     socketio.emit('auth_event', log_entry)
                     send_to_listener("TOUCH - SUCCESS") 
+                    #for lcd
+                    socketio.emit('auth_success', log_entry)
                 
                 # Detect failed attempts
                 elif "timeout" in line or "Incorrect input" in line:
@@ -775,84 +777,84 @@ def upload_approved():
 
 
 # Function to transfer a file to the Raspberry Pi via SSH/SFTP
-def transfer_file_to_pi(local_path, remote_path, pi_ip, username, password):
-    """
-    Transfer a file to the Raspberry Pi and verify the transfer
+# def transfer_file_to_pi(local_path, remote_path, pi_ip, username, password):
+#     """
+#     Transfer a file to the Raspberry Pi and verify the transfer
     
-    Returns:
-        tuple: (success_status, message)
-    """
-    ssh = None
-    sftp = None
+#     Returns:
+#         tuple: (success_status, message)
+#     """
+#     ssh = None
+#     sftp = None
     
-    try: 
-        # Log connection attempt
-        logger.info(f"Connecting to Raspberry Pi at {pi_ip}...")
+#     try: 
+#         # Log connection attempt
+#         logger.info(f"Connecting to Raspberry Pi at {pi_ip}...")
         
-        # Set up SSH client
-        ssh = paramiko.SSHClient()  
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+#         # Set up SSH client
+#         ssh = paramiko.SSHClient()  
+#         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         
-        # Connect with timeout
-        ssh.connect(
-            pi_ip, 
-            username=username, 
-            password=password,
-            timeout=10  # 10 second timeout
-        )
-        logger.info("SSH connection established")
+#         # Connect with timeout
+#         ssh.connect(
+#             pi_ip, 
+#             username=username, 
+#             password=password,
+#             timeout=10  # 10 second timeout
+#         )
+#         logger.info("SSH connection established")
          
-        # Open SFTP session
-        sftp = ssh.open_sftp()
+#         # Open SFTP session
+#         sftp = ssh.open_sftp()
         
-        # Ensure remote directory exists
-        remote_dir = os.path.dirname(remote_path)
-        try:
-            # Try to create the directory (will fail if it exists, which is fine)
-            stdin, stdout, stderr = ssh.exec_command(f"mkdir -p {remote_dir}")
-            exit_status = stdout.channel.recv_exit_status()
-            if exit_status != 0:
-                logger.warning(f"mkdir command returned non-zero exit status: {exit_status}")
-        except Exception as e:
-            logger.warning(f"Error ensuring remote directory exists: {e}")
+#         # Ensure remote directory exists
+#         remote_dir = os.path.dirname(remote_path)
+#         try:
+#             # Try to create the directory (will fail if it exists, which is fine)
+#             stdin, stdout, stderr = ssh.exec_command(f"mkdir -p {remote_dir}")
+#             exit_status = stdout.channel.recv_exit_status()
+#             if exit_status != 0:
+#                 logger.warning(f"mkdir command returned non-zero exit status: {exit_status}")
+#         except Exception as e:
+#             logger.warning(f"Error ensuring remote directory exists: {e}")
         
-        # Get local file size for verification
-        local_size = os.path.getsize(local_path)
-        logger.info(f"Local image size: {local_size} bytes")
+#         # Get local file size for verification
+#         local_size = os.path.getsize(local_path)
+#         logger.info(f"Local image size: {local_size} bytes")
         
-        # Transfer the file
-        logger.info(f"Transferring image {local_path} to {remote_path}...")
-        sftp.put(local_path, remote_path)
+#         # Transfer the file
+#         logger.info(f"Transferring image {local_path} to {remote_path}...")
+#         sftp.put(local_path, remote_path)
         
-        # Verify the transfer by checking file existence and size
-        try:
-            # Check if file exists and get its size
-            remote_stat = sftp.stat(remote_path)
-            remote_size = remote_stat.st_size
-            logger.info(f"Remote image size: {remote_size} bytes")
+#         # Verify the transfer by checking file existence and size
+#         try:
+#             # Check if file exists and get its size
+#             remote_stat = sftp.stat(remote_path)
+#             remote_size = remote_stat.st_size
+#             logger.info(f"Remote image size: {remote_size} bytes")
             
-            if remote_size == local_size:
-                return True, "Image transferred and verified successfully"
-            else:
-                return False, f"Size mismatch: Local {local_size} bytes, Remote {remote_size} bytes"
+#             if remote_size == local_size:
+#                 return True, "Image transferred and verified successfully"
+#             else:
+#                 return False, f"Size mismatch: Local {local_size} bytes, Remote {remote_size} bytes"
                 
-        except FileNotFoundError:
-            return False, "Image not found on remote system after transfer"
+#         except FileNotFoundError:
+#             return False, "Image not found on remote system after transfer"
             
-    except paramiko.AuthenticationException:
-        return False, "Authentication failed. Check username and password."
-    except paramiko.SSHException as e:
-        return False, f"SSH connection error: {str(e)}"
-    except socket.timeout:
-        return False, "Connection timed out. Check IP address and network."
-    except Exception as e:
-        return False, f"Error: {str(e)}"
-    finally:
-        # Clean up
-        if sftp:
-            sftp.close()
-        if ssh:
-            ssh.close()
+#     except paramiko.AuthenticationException:
+#         return False, "Authentication failed. Check username and password."
+#     except paramiko.SSHException as e:
+#         return False, f"SSH connection error: {str(e)}"
+#     except socket.timeout:
+#         return False, "Connection timed out. Check IP address and network."
+#     except Exception as e:
+#         return False, f"Error: {str(e)}"
+#     finally:
+#         # Clean up
+#         if sftp:
+#             sftp.close()
+#         if ssh:
+#             ssh.close()
 
 def update_sensor_pattern():
     """Update the sensor settings on the Pico by restarting the main script."""

@@ -344,6 +344,73 @@ def draw_facial_recognition_success_screen():
     draw.text((10, height - 20), "Press Y to Return", font=font, fill=(180, 180, 180))
     display.display()
 
+"""
+LCD SCREENS FOR Rotary Authentication
+"""
+def draw_Rotary_screen():
+
+    draw.rectangle((0, 0, width, height), fill=(0, 0, 0))
+    draw.text((20, 20), "START TURNING", font=font, fill=(0, 255, 255))
+    draw.text((10, height - 20), "Press Y to Cancel", font=font, fill=(180, 180, 180))
+    display.display()
+def draw_rotary_error_screen():
+    """
+    shows an error screen for Rotary.
+    """
+    draw.rectangle((0, 0, width, height), fill=(0, 0, 0))
+    draw.text((20, 20), "Rotary Authentication Failed", font=font, fill=(255, 0, 0))
+    draw.text((10, height - 20), "Press Y to Return", font=font, fill=(180, 180, 180))
+    display.display()
+def draw_rotary_success_screen():
+    """
+    shows a success screen for Rotary.
+    """
+    draw.rectangle((0, 0, width, height), fill=(0, 0, 0))
+    draw.text((20, 20), "Rotary Successful", font=font, fill=(0, 255, 0))
+    draw.text((10, height - 20), "Press Y to Return", font=font, fill=(180, 180, 180))
+    display.display()
+
+def draw_rotary_timeout_screen():
+    """Shows a timeout message for Rotary."""
+    draw.rectangle((0, 0, width, height), fill=(0, 0, 0))
+    draw.text((20, 20), "Rotary Timeout", font=font, fill=(255, 165, 0)) # Orange color
+    draw.text((10, height - 20), "Press Y to Return", font=font, fill=(180, 180, 180))
+    display.display()
+
+"""
+LCD SCREENS FOR Tap Pattern
+"""
+def draw_tap_screen():
+
+    draw.rectangle((0, 0, width, height), fill=(0, 0, 0))
+    draw.text((20, 20), "START TAPPING", font=font, fill=(0, 255, 255))
+    draw.text((10, height - 20), "Press Y to Cancel", font=font, fill=(180, 180, 180))
+    display.display()
+def draw_tap_error_screen():
+    """
+    shows an error screen for Rotary.
+    """
+    draw.rectangle((0, 0, width, height), fill=(0, 0, 0))
+    draw.text((20, 20), "Tap pattern Auth Failed", font=font, fill=(255, 0, 0))
+    draw.text((10, height - 20), "Press Y to Return", font=font, fill=(180, 180, 180))
+    display.display()
+def draw_tap_success_screen():
+    """
+    shows a success screen for Rotary.
+    """
+    draw.rectangle((0, 0, width, height), fill=(0, 0, 0))
+    draw.text((20, 20), "Tap pattern Successful", font=font, fill=(0, 255, 0))
+    draw.text((10, height - 20), "Press Y to Return", font=font, fill=(180, 180, 180))
+    display.display()
+
+def draw_tap_timeout_screen():
+    """Shows a timeout message for Rotary."""
+    draw.rectangle((0, 0, width, height), fill=(0, 0, 0))
+    draw.text((20, 20), "Tap Pattern Timeout", font=font, fill=(255, 165, 0)) # Orange color
+    draw.text((10, height - 20), "Press Y to Return", font=font, fill=(180, 180, 180))
+    display.display()
+
+
 # --- Facial Recognition Starter Function ---
 def start_facial_recognition(script_path, imagelist_path, timeout=30):
     """
@@ -645,7 +712,30 @@ voice_process = None
 # Initialize Socket.IO client
 sio = socketio.Client(logger=False, engineio_logger=False) # Set logger to True for debugging if needed
 has_connected = False
-
+#socket to lsiten for rotary and touch events
+@sio.event
+def auth_success(data):
+    """Receive authentication success signals from web server"""
+    global current_screen
+    
+    auth_method = data.get('method', 'Unknown')
+    print(f"Received authentication success for method: {auth_method}")
+    
+    # Show appropriate success screen based on method
+    if auth_method == 'Touch Pattern':
+        # Show touch pattern success
+        draw_error_screen("Touch Auth Successful!")
+        time.sleep(1.5)
+    elif auth_method == 'Rotary Input':
+        # Show rotary authentication success
+        draw_error_screen("Rotary Auth Successful!")
+        time.sleep(1.5)
+    
+    # Return to home screen after showing success
+    if current_screen != "home":
+        current_screen = "home"
+        emit_lcd_mode_change(current_screen)
+        draw_home_screen()
 @sio.event
 def connect():
     global has_connected
