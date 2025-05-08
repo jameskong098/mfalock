@@ -2,6 +2,8 @@
 
 ## 🔒 Multi-Factor Authentication Smart Lock for Dorms
 
+[Demo Link](https://youtu.be/okhmROpeQ74)
+
 ## About MFA Lock
 
 Has this ever happened to you? After a long night of coding for CS 142A, you finally make it home, exhausted, barely debating whether brushing your teeth is worth the effort. But as you reach your door, the realization hits—you forgot your key. Locked out, helpless, and half-asleep, you call the lockout assistant, only to wait endlessly while they take their time.
