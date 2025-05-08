@@ -1072,23 +1072,23 @@ while True:
                 except Exception as e:
                     print(f"Failed to clear voice phrase on web UI: {e}")
 
-                # # Wait for Y press or timeout to return home
-                # wait_start_time = time.time()
-                # returned_home = False
-                # print("Waiting for Y press to return home... 1")
-                # while time.time() - wait_start_time < 5: # Wait up to 5 seconds on result screen
-                #      print("Waiting for Y press to return home... 2")
-                #      if display.read_button(display.BUTTON_Y):
-                #          current_screen = "home"
-                #          emit_lcd_mode_change(current_screen) 
-                #          draw_home_screen()
-                #          returned_home = True
-                #          break
-                #      time.sleep(0.1) # Non-blocking sleep
-                # if not returned_home:
-                #     current_screen = "home"
-                #     emit_lcd_mode_change(current_screen) 
-                #     draw_home_screen()
+                # Wait for Y press or timeout to return home
+                wait_start_time = time.time()
+                returned_home = False
+                print("Waiting for Y press to return home... 1")
+                while time.time() - wait_start_time < 5: # Wait up to 5 seconds on result screen
+                     print("Waiting for Y press to return home... 2")
+                     if display.read_button(display.BUTTON_Y):
+                         current_screen = "home"
+                         emit_lcd_mode_change(current_screen) 
+                         draw_home_screen()
+                         returned_home = True
+                         break
+                     time.sleep(0.1) # Non-blocking sleep
+                if not returned_home:
+                    current_screen = "home"
+                    emit_lcd_mode_change(current_screen) 
+                    draw_home_screen()
 
             time.sleep(0.2) # Debounce X button
 
@@ -1154,7 +1154,7 @@ while True:
                     draw_keypad_screen() # Redraw keypad for another attempt
             else: # Not 4 digits yet, just update the display
                 draw_keypad_screen()
-            time.sleep(0.2)
+            time.sleep(0.2) 
 
         elif display.read_button(display.BUTTON_Y):  # Return to home
             print("pressed Y to return")
