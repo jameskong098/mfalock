@@ -43,7 +43,7 @@ if ALLOWED_WEB_SERVER_IP is None:
     sys.exit(1) 
 
 # --- Multi-factor Session Configuration ---
-REQUIRED_AUTH_COUNT = 3  # Number of unique authentication methods required
+REQUIRED_AUTH_COUNT = 2  # Number of unique authentication methods required
 UNLOCK_TO_LOCK_DELAY = 3  # Delay in seconds between unlock and lock commands
 SESSION_TIMEOUT_SECONDS = 30  # Time allowed per session (seconds)
 # -----------------------------------------
