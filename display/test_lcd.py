@@ -441,11 +441,40 @@ def start_facial_recognition(script_path, imagelist_path, timeout=30):
         # Start the facial recognition process
 
         face_process = subprocess.Popen(
-            ["python3", script_path, "--imagelist", imagelist_path],  # FIXED
+            ["python3", script_path, "--imagelist", imagelist_path],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True
+            text=True,
+            bufsize=1,  # Line buffering for more responsive output
+            universal_newlines=True
         )
+
+        # Start a watchdog thread to check for Y button press while process is running
+        start_time = time.time()
+        while face_process.poll() is None:  # While process is still running
+            # Check if Y button is pressed to cancel
+            if display.read_button(display.BUTTON_Y):
+                print("Cancelling facial recognition...")
+                face_process.terminate()
+                try:
+                    face_process.wait(timeout=1)  # Give it a second to terminate gracefully
+                except subprocess.TimeoutExpired:
+                    face_process.kill()  # Force kill if it doesn't terminate
+                    
+                # Return to home screen
+                current_screen = "home"
+                emit_lcd_mode_change(current_screen)
+                draw_home_screen()
+                return "CANCELLED"
+            
+            # Check for timeout
+            if time.time() - start_time > timeout:
+                print("Facial recognition timeout reached")
+                face_process.terminate()
+                return "TIMEOUT"
+            
+            # Small sleep to prevent CPU hogging
+            time.sleep(0.1)
 
         try:
             output, error = face_process.communicate(timeout=timeout)
@@ -635,12 +664,12 @@ def start_voice_recognition(script_path, timeout=35):
                     except Exception as e:
                         print(f"Failed to send cancel socket event for voice: {e}")
             
-            # If Y is pressed on the result screen, it will also bring back to home
-            print("Returning to home screen from voice recognition.")
-            current_screen = "home"
-            emit_lcd_mode_change(current_screen)
-            draw_home_screen()
-            time.sleep(0.2) # Debounce Y button
+                # If Y is pressed on the result screen, it will also bring back to home
+                print("Returning to home screen from voice recognition.")
+                current_screen = "home"
+                emit_lcd_mode_change(current_screen)
+                draw_home_screen()
+                time.sleep(0.2) # Debounce Y button
 
             # Check if the process has ended
             if voice_process.poll() is not None:
@@ -1043,23 +1072,23 @@ while True:
                 except Exception as e:
                     print(f"Failed to clear voice phrase on web UI: {e}")
 
-                # Wait for Y press or timeout to return home
-                wait_start_time = time.time()
-                returned_home = False
-                print("Waiting for Y press to return home... 1")
-                while time.time() - wait_start_time < 5: # Wait up to 5 seconds on result screen
-                     print("Waiting for Y press to return home... 2")
-                     if display.read_button(display.BUTTON_Y):
-                         current_screen = "home"
-                         emit_lcd_mode_change(current_screen) 
-                         draw_home_screen()
-                         returned_home = True
-                         break
-                     time.sleep(0.1) # Non-blocking sleep
-                if not returned_home:
-                    current_screen = "home"
-                    emit_lcd_mode_change(current_screen) 
-                    draw_home_screen()
+                # # Wait for Y press or timeout to return home
+                # wait_start_time = time.time()
+                # returned_home = False
+                # print("Waiting for Y press to return home... 1")
+                # while time.time() - wait_start_time < 5: # Wait up to 5 seconds on result screen
+                #      print("Waiting for Y press to return home... 2")
+                #      if display.read_button(display.BUTTON_Y):
+                #          current_screen = "home"
+                #          emit_lcd_mode_change(current_screen) 
+                #          draw_home_screen()
+                #          returned_home = True
+                #          break
+                #      time.sleep(0.1) # Non-blocking sleep
+                # if not returned_home:
+                #     current_screen = "home"
+                #     emit_lcd_mode_change(current_screen) 
+                #     draw_home_screen()
 
             time.sleep(0.2) # Debounce X button
 
@@ -1218,54 +1247,5 @@ while True:
                 current_screen = "set_password"
                 draw_set_password_screen()
             time.sleep(0.2)
-    elif current_screen == "Facial_recognition":
-        if display.read_button(display.BUTTON_Y):
-            if face_process and face_process.poll() is None:
-                face_process.terminate()
-                face_process = None
-            current_screen = "home"
-            emit_lcd_mode_change(current_screen)
-            draw_home_screen()
-            time.sleep(0.2)
-    elif current_screen == "Voice_recognition":
-        print("Voice recognition screen active")
-        # Handle cancellation while the voice script is running OR while on result screen
-        if display.read_button(display.BUTTON_Y):
-            print("starting cancelation for voice recognition")
-            if voice_process and voice_process.poll() is None:
-                print("Cancelling voice recognition script...")
-                voice_process.kill() 
-                try:
-                    voice_process.communicate(timeout=1) # Attempt to get remaining output
-                except subprocess.TimeoutExpired:
-                    print("Timeout during communicate after kill in Y press.")
-                except ValueError:
-                    print("ValueError during communicate after kill in Y press (pipes closed).")
-                voice_process = None
-                try:
-                    if sio.connected:
-                        sio.emit('auth_event', {
-                            'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
-                            'status': 'cancelled',
-                            'message': 'Voice recognition cancelled by user',
-                            'method': 'Voice Recognition',
-                            'user': 'User',
-                            'location': 'Main Entrance',
-                            'details': 'User pressed cancel button during operation.'
-                        })
-                        sio.emit('display_voice_phrase', {'phrase': ''}) 
-                        sio.emit('recognized_speech_input', {'text': ''}) # Clear recognized text on cancel
-                        print("Sent 'cancelled' auth_event for voice recognition.")
-                    else:
-                        print("Cannot emit events - Socket.IO not connected")
-                except Exception as e:
-                    print(f"Failed to send cancel socket event for voice: {e}")
-            
-            # If Y is pressed on the result screen, it will also bring back to home
-            print("Returning to home screen from voice recognition.")
-            current_screen = "home"
-            emit_lcd_mode_change(current_screen)
-            draw_home_screen()
-            time.sleep(0.2) # Debounce Y button
 
     time.sleep(0.05)
