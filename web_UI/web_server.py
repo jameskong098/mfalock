@@ -738,6 +738,11 @@ def upload_approved():
         f.write(file.filename + '\n')
 
     logger.info(f"Image saved locally at: {image_path}")
+    return jsonify({
+        'status': 'success', 
+        'message': 'Image uploaded successfully',
+        'path': image_path
+    })
     
     # NOTE: This code is for transferring the image to a Raspberry Pi. We no longer needed this because we decided to run the web server on the Raspberry Pi.  
     # try:
