@@ -2,7 +2,9 @@
 
 ## 🔒 Multi-Factor Authentication Smart Lock for Dorms
 
-[Demo Link](https://youtu.be/okhmROpeQ74)
+[Demo Video](https://www.youtube.com/watch?v=bCD5fVvEwWU)
+
+[Presentation Slides](./MFA%20Lock%20Project.pdf)
 
 ## About MFA Lock
 
