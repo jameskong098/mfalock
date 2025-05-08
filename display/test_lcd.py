@@ -1042,14 +1042,18 @@ while True:
                 if len(entered_digits) < 4:
                     entered_digits += selected_digit
             
-            # Emit keypad_update after digit change
-            try:
-                sio.emit('keypad_update', {'digits': entered_digits})
-            except Exception as e:
-                print(f"Error emitting keypad_update: {e}")
 
             if len(entered_digits) == 4:
-                if entered_digits == user_password and password_Set:
+                if not password_Set:
+                    print("No password set. Please set a password first.")
+                    draw_error_screen("Set password first!")
+                    time.sleep(2) # Show error for 2 seconds
+                    entered_digits = "" # Reset digits
+                    keypad_index = 0    # Reset keypad selection
+                    current_screen = "set_password"
+                    emit_lcd_mode_change(current_screen) # Inform web UI if needed
+                    draw_set_password_screen()
+                elif entered_digits == user_password: # password_Set is implicitly True here
                     print("Keypad Authentication Successful")
                     draw_keypad_success_screen() 
                     sio.emit('auth_event', {
